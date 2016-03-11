@@ -2,6 +2,7 @@
 
 function Build() {
     echo "Building ..."
+    go install codelib
     go build main.go
 }
 
