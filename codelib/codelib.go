@@ -11,15 +11,15 @@ import (
 	"github.com/jmcvetta/neoism"
 	/*
 	 *"time"
-	 */
-	"fmt"
-)
+	 */)
 
 var Gopath = strings.Split(os.Getenv("GOPATH"), ":")
 
 var _GoDB *neoism.Database
 
 var _ObjNodeMap map[*ast.Object]*neoism.Node
+
+var _ObjectMethodsMap map[*ast.Object][]*ast.FuncDecl
 
 func fail(s string, a ...interface{}) {
 
@@ -28,6 +28,8 @@ func fail(s string, a ...interface{}) {
 func init() {
 	_GoDB = nil
 	_ObjNodeMap = make(map[*ast.Object]*neoism.Node)
+
+	_ObjectMethodsMap = make(map[*ast.Object][]*ast.FuncDecl)
 }
 
 func SetDB(db *neoism.Database) {
@@ -84,61 +86,169 @@ func _ExportImportsInFileToDB(file *ast.File, fnode *neoism.Node) (err error) {
 	return nil
 }
 
+func _ExportMethodsOfType(file *ast.File, type_spec_object *ast.Object, tnode *neoism.Node) (err error) {
+	if _, ok := _ObjectMethodsMap[type_spec_object]; !ok {
+		return nil
+	}
+
+	for _, method := range _ObjectMethodsMap[type_spec_object] {
+
+		var method_node *neoism.Node = nil
+		if method_node, err = _GoDB.CreateNode(neoism.Props{"name": method.Name.Name}); err != nil{
+			return err
+		}
+
+		// function
+		if err := method_node.AddLabel("FUNCTION"); err != nil {
+			return err
+		}
+
+		if _, err := tnode.Relate("HAS", method_node.Id(), neoism.Props{}); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+
 // _ExportTypesInFileToDB exports both types and interfaces
 func _ExportTypesInFileToDB(file *ast.File, fnode *neoism.Node) (err error) {
+	/**
+	type File struct {
+		Doc        *CommentGroup   // associated documentation; or nil
+		Package    token.Pos       // position of "package" keyword
+		Name       *Ident          // package name
+		Decls      []Decl          // top-level declarations; or nil
+		Scope      *Scope          // package scope (this file only)
+		Imports    []*ImportSpec   // imports in this file
+		Unresolved []*Ident        // unresolved identifiers in this file
+		Comments   []*CommentGroup // list of all comments in the source file
+	}
 
+	type Scope struct {
+		Outer   *Scope
+		Objects map[string]*Object
+	}
+	*/
+
+	// Scope.Outer equals to nil when it's in File
+
+	for object_name, object := range file.Scope.Objects {
+		/* Kind = Bad, Pkg, Con, Typ, Var, Fun, Lbl */
+		if object.Kind != ast.Typ { // skip
+			continue
+		}
+
+		var object_decl *ast.TypeSpec
+		if object_decl, ok := object.Decl.(*ast.TypeSpec); ok {
+			// do nothing
+			object_decl.Pos();
+		} else {
+			panic("should not reach here.")
+		}
+
+		type_spec_node, err := _GoDB.CreateNode(neoism.Props{"name": object_name})
+
+		if err != nil {
+			return err
+		}
+
+		switch object_decl.Type.(type) {
+		case *ast.ArrayType:
+			err = type_spec_node.AddLabel("ARRAY_TYPE")
+		case *ast.ChanType:
+			err = type_spec_node.AddLabel("CHAN_TYPE")
+		case *ast.FuncType:
+			err = type_spec_node.AddLabel("FUNC_TYPE")
+		case *ast.InterfaceType:
+			err = type_spec_node.AddLabel("INTERFACE_TYPE")
+		case *ast.MapType:
+			err = type_spec_node.AddLabel("MAP_TYPE")
+		case *ast.StructType:
+			err = type_spec_node.AddLabel("STRUCT_TYPE")
+		default:
+			panic("oh god, how do i get here.")
+		}
+
+		if err != nil {
+			return err
+		}
+
+		if err = type_spec_node.AddLabel("TYPE"); err != nil {
+			return err
+		}
+
+		if _, err = fnode.Relate("DEFINES", type_spec_node.Id(), neoism.Props{}); err != nil {
+			return err
+		}
+
+		if err = _ExportMethodsOfType(file, object, type_spec_node); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func _ExportFunctionsInFileToDB(file *ast.File, fnode *neoism.Node) (err error) {
+	/* Decls:
+	BadDecl,
+	FuncDecl,
+	GenDecl ( represents an import, constant, type or variable declaration )
+	*/
 	for _, decl := range file.Decls {
-		// Type Assertion
-		if gendecl, ok := decl.(*ast.GenDecl); ok {
-			// TOKEN: TYPE {struct | interface}
-			if gendecl.Tok == token.TYPE {
-				for _, spec := range gendecl.Specs {
-					// Type Assertion
-					switch spec_type := spec.(type) {
-					case *ast.TypeSpec:
-						type_spec, _ := spec.(*ast.TypeSpec)
-						type_spec_node, err := _GoDB.CreateNode(neoism.Props{"name": type_spec.Name.Name})
-						if err != nil {
-							return err
-						}
-						// *Ident, *ParenExpr, *SelectorExpr, *StarExpr and *XxxTypes
-						switch type_spec.Type.(type) {
-						case *ast.InterfaceType:
-							_ObjNodeMap[type_spec.Name.Obj] = type_spec_node
-							// Struct Info
-							err := type_spec_node.SetLabels([]string{"TYPE", "INTERFACE"})
-							if err != nil {
-								return err
-							}
-						case *ast.StructType:
-							_ObjNodeMap[type_spec.Name.Obj] = type_spec_node
-							// Interface Info
-							err := type_spec_node.SetLabels([]string{"TYPE", "STRUCT"})
-							if err != nil {
-								return err
-							}
-						// Ignored
-						/*
-						 *case *ast.ArrayType:
-						 *case *ast.ChanType:
-						 *case *ast.FuncType:
-						 *case *ast.MapType:
-						 */
-						/*
-						 *case *ast.Ident:
-						 *case *ast.ParenExpr:
-						 *case *ast.SelectorExpr:
-						 *case *ast.StarExpr:
-						 */
-						default:
-						}
-					/*
-					 *case *ast.ImportSpec:
-					 *case *ast.ValueSpec:
-					 */
-					default:
-						fmt.Printf("Unexpected type %T\n", spec_type)
+		var func_decl *ast.FuncDecl = nil
+		switch decl.(type) {
+		case *ast.FuncDecl:
+			func_decl = decl.(*ast.FuncDecl)
+		case *ast.BadDecl:
+			continue
+		case *ast.GenDecl:
+			continue
+		default:
+			panic("should not reach here")
+		}
+
+		// assert func_decl != nil
+
+		if func_decl.Recv == nil {
+			var func_decl_node *neoism.Node
+
+			if func_decl_node, err = _GoDB.CreateNode(neoism.Props{"name": func_decl.Name.Name}); err != nil{
+				return err
+			}
+
+			// function
+			if err := func_decl_node.AddLabel("FUNCTION"); err != nil {
+				return err
+			}
+
+			if _, err := fnode.Relate("HAS", func_decl_node.Id(), neoism.Props{}); err != nil {
+				return err
+			}
+		} else {
+			// method
+			if func_decl.Recv.NumFields() == 1 {
+				field := func_decl.Recv.List[0]
+
+				var recv_object *ast.Object = nil
+
+				switch field.Type.(type) {
+				case *ast.StarExpr:
+					recv_object = field.Type.(*ast.StarExpr).X.(*ast.Ident).Obj
+				case *ast.Ident:
+					recv_object = field.Type.(*ast.Ident).Obj
+				default:
+					panic("should not reach here")
+				}
+
+				if recv_object != nil {
+					if _, ok := _ObjectMethodsMap[recv_object]; !ok {
+						_ObjectMethodsMap[recv_object] = make([]*ast.FuncDecl, 0, 8)
 					}
+
+					_ObjectMethodsMap[recv_object] = append(_ObjectMethodsMap[recv_object], func_decl)
 				}
 			}
 		}
@@ -147,19 +257,23 @@ func _ExportTypesInFileToDB(file *ast.File, fnode *neoism.Node) (err error) {
 	return nil
 }
 
-func _ExportFunctionsInFileToDB(file *ast.File, fnode *neoism.Node) (err error) {
+func _ExportFileToDB(file *ast.File, fnode *neoism.Node) (err error) {
 
-	for _, decl := range file.Decls {
-		// Type Assertion
-		if _, ok := decl.(*ast.FuncDecl); ok {
-
-		}
+	if err = _ExportPackageInFileToDB(file, fnode); err != nil {
+		return err
 	}
 
-	return nil
-}
+	if err = _ExportImportsInFileToDB(file, fnode); err != nil {
+		return err
+	}
 
-func _ExportFileToDB(file *ast.File, fnode *neoism.Node) (err error) {
+	if err = _ExportFunctionsInFileToDB(file, fnode); err != nil {
+		return err
+	}
+
+	if err = _ExportTypesInFileToDB(file, fnode); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -218,8 +332,21 @@ func ExportFileToDB(filename string) (err error) {
 	fset := token.NewFileSet()
 
 	// Parse the file
-	_, err = parser.ParseFile(fset, filename, file, 0)
+	f, err := parser.ParseFile(fset, filename, file, 0)
 	if err != nil {
+		return err
+	}
+
+	// Export FILE node
+	fnode, err := _GoDB.CreateNode(neoism.Props{"name": filename})
+	if err != nil {
+		return err
+	}
+	if err = fnode.AddLabel("FILE"); err != nil {
+		return err
+	}
+
+	if err = _ExportFileToDB(f, fnode); err != nil {
 		return err
 	}
 

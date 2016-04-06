@@ -17,12 +17,12 @@ func main() {
 
 	db, err:= codelib.ConnectToDB(username, password, url)
 	if err != nil {
-		fmt.Println(err.Error())
+		panic(err.Error())
 	}
 	codelib.SetDB(db)
 
 	err = codelib.ExportImportsInFileToDB(os.Args[1])
 	if err != nil {
-		fmt.Println(err.Error())
+		panic(err.Error())
 	}
 }
