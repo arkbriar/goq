@@ -140,8 +140,9 @@ func _ExportTypesInFileToDB(file *ast.File, fnode *neoism.Node) (err error) {
 			continue
 		}
 
-		var object_decl *ast.TypeSpec
-		if object_decl, ok := object.Decl.(*ast.TypeSpec); ok {
+		var object_decl *ast.TypeSpec = nil
+		var ok bool
+		if object_decl, ok = object.Decl.(*ast.TypeSpec); ok {
 			// do nothing
 			object_decl.Pos();
 		} else {

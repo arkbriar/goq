@@ -21,7 +21,7 @@ func main() {
 	}
 	codelib.SetDB(db)
 
-	err = codelib.ExportImportsInFileToDB(os.Args[1])
+	err = codelib.ExportFileToDB(os.Args[1])
 	if err != nil {
 		panic(err.Error())
 	}
