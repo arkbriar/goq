@@ -72,7 +72,7 @@ func __ResolveFuncType(funcType *ast.FuncType, __function *GoFunc) {
 	for _, paramField := range funcType.Params.List {
 		__assert(paramField.Names != nil)
 		arg := &GoVar{Name: paramField.Names[0].Name, Type: __GetFieldTypeName(paramField.Type)}
-		__function.Args[paramField.Names[0].Name] = arg
+		__function.Args = append(__function.Args, arg)
 	}
 
 	for _, resultField := range funcType.Results.List {
@@ -189,8 +189,69 @@ func __ResolveAllMethods(astFile *ast.File, gfile *GoFile) {
 	}
 }
 
-func __ResolveAllRelations(gfile *GoFile) {
+func __IsInterfaceImplemented(methods map[string]*GoMethod, __interface *GoInterface) bool {
+	for name, imethod := range __interface.Methods {
+		if method, ok := methods[name]; !ok { // not found
+			break
+		} else {
+			if method.Equal(imethod) {
+				return true
+			}
+		}
+	}
 
+	return false
+}
+
+func __ResolveAllRelations(gfile *GoFile) {
+	// pick out the structs & interfaces from anonymous that this file knowns
+	for _, __struct := range gfile.Ns.GetStructs() {
+		for _, anonymous := range __struct.__Anonymous {
+			__a_type := gfile.Ns.GetType(anonymous)
+			switch __a_type.Kind {
+			case Stt:
+				__struct.Extends[anonymous] = __a_type.Type.(*GoStruct)
+			case Itf:
+				__struct.Interfaces[anonymous] = __a_type.Type.(*GoInterface)
+			case Als:
+			case Bti:
+			default:
+				panic("golang/golang.go ## __ResolveAllRelations: should not reach here")
+			}
+		}
+	}
+
+	// find out interfaces implemented by type
+
+	for _, __type := range gfile.Ns.GetTypes() {
+		if __type.Kind != Stt || __type.Kind != Als {
+			continue
+		}
+
+		var Methods map[string]*GoMethod = nil
+		var Interfaces map[string]*GoInterface = nil
+
+		if __type.Kind == Stt {
+			Methods = __type.Type.(*GoStruct).Methods
+			Interfaces = __type.Type.(*GoStruct).Interfaces
+		} else {
+			Methods = __type.Type.(*GoAlias).Methods
+			Interfaces = __type.Type.(*GoAlias).Interfaces
+		}
+
+		__assert(Methods != nil && Interfaces != nil)
+
+		for _, __interface := range gfile.Ns.GetInterfaces() {
+			if _, ok := Interfaces[__interface.Name]; ok {
+				// skip
+				continue
+			}
+			if __IsInterfaceImplemented(Methods, __interface) {
+				Interfaces[__interface.Name] = __interface
+			}
+		}
+
+	}
 }
 
 func __GenerateGoFileFromAstFile(astFile *ast.File, name string) (*GoFile, error) {

@@ -12,6 +12,8 @@ type nsMethods interface {
 	GetFuncs() []*GoFunc
 	GetType(name string) *GoType
 	GetFunc(name string) *GoFunc
+	GetStructs() []*GoStruct
+	GetInterfaces() []*GoInterface
 }
 
 type goNamespace struct {
@@ -57,6 +59,30 @@ func (this *goNamespace) GetTypes() []*GoType {
 	}
 
 	return types
+}
+
+func (this *goNamespace) GetStructs() []*GoStruct {
+	var structs []*GoStruct = make([]*GoStruct, 0, 16)
+
+	for _, v := range this.Types {
+		if v.Kind == Stt {
+			structs = append(structs, v.Type.(*GoStruct))
+		}
+	}
+
+	return structs
+}
+
+func (this *goNamespace) GetInterfaces() []*GoInterface {
+	var interfaces []*GoInterface = make([]*GoInterface, 0, 16)
+
+	for _, v := range this.Types {
+		if v.Kind == Itf {
+			interfaces = append(interfaces, v.Type.(*GoInterface))
+		}
+	}
+
+	return interfaces
 }
 
 func (this *goNamespace) GetFuncs() []*GoFunc {
@@ -211,7 +237,7 @@ type (
 
 	GoFunc struct {
 		Name string            // function name
-		Args map[string]*GoVar // function args
+		Args []*GoVar // function args
 		Rets []*GoVar          // function rets
 	}
 
@@ -279,7 +305,7 @@ func CreateGoAlias(name string) *GoAlias {
 func CreateGoFunc(name string) *GoFunc {
 	gf := &GoFunc{
 		Name: name,
-		Args: make(map[string]*GoVar),
+		Args: make([]*GoVar, 0, 4),
 		Rets: make([]*GoVar, 0, 2),
 	}
 
@@ -300,4 +326,32 @@ func (this *GoInterface) AddMethod(method *GoMethod) {
 
 func (this *GoAlias) AddMethod(method *GoMethod) {
 	this.Methods[method.Name] = method
+}
+
+func (this *GoMethod) Equal(other *GoMethod) bool {
+	if this.Name != other.Name {
+		return false
+	}
+
+	if len(this.Args) != len(other.Args) {
+		return false
+	}
+
+	if len(this.Rets) != len(other.Rets) {
+		return false
+	}
+
+	for i, argType := range this.Args {
+		if argType.Type != other.Args[i].Type {
+			return false
+		}
+	}
+
+	for i, retType := range this.Rets {
+		if retType.Type != other.Rets[i].Type {
+			return false
+		}
+	}
+
+	return true
 }
