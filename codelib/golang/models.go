@@ -109,6 +109,34 @@ func (this *GoType) Name() string {
 	return name
 }
 
+func CreateGoTypeOfStruct(__type *GoStruct) *GoType {
+	return &GoType{
+		Kind: Stt,
+		Type: __type,
+	}
+}
+
+func CreateGoTypeOfInterface(__type *GoInterface) *GoType {
+	return &GoType{
+		Kind: Itf,
+		Type: __type,
+	}
+}
+
+func CreateGoTypeOfAlias(__type *GoAlias) *GoType {
+	return &GoType{
+		Kind: Als,
+		Type: __type,
+	}
+}
+
+func CreateGoTypeOfBuiltin(__type *GoBuiltin) *GoType {
+	return &GoType{
+		Kind: Bti,
+		Type: __type,
+	}
+}
+
 var (
 	// Builtin types & interfaces(e.g. type error interface { Error() string })
 	Bool       = &GoType{Kind: Bti, Type: &GoBuiltin{"bool"}}
@@ -152,16 +180,17 @@ type (
 	}
 
 	GoVar struct {
-		Name string  // var name
-		Type *GoType // var type
+		Name string // var name
+		Type string // var type
 	}
 
 	GoStruct struct {
-		Name       string                  // struct name
-		Vars       map[string]*GoVar       // variables in struct
-		Methods    map[string]*GoMethod    // methods
-		Interfaces map[string]*GoInterface // interfaces
-		Extends    map[string]*GoStruct    // extends
+		Name        string                  // struct name
+		Vars        map[string]*GoVar       // variables in struct
+		Methods     map[string]*GoMethod    // methods
+		Interfaces  map[string]*GoInterface // interfaces
+		Extends     map[string]*GoStruct    // extends
+		__Anonymous []string                // anonymous, embedded structs or interfaces
 	}
 
 	GoInterface struct {
@@ -171,7 +200,7 @@ type (
 
 	GoAlias struct {
 		Name       string                  // alias name
-		Type       *GoType                 // original type
+		Type       string                  // original type
 		Methods    map[string]*GoMethod    // methods
 		Interfaces map[string]*GoInterface // interfaces
 	}
@@ -217,11 +246,12 @@ func CreateGoFile(name string) *GoFile {
 
 func CreateGoStruct(name string) *GoStruct {
 	gs := &GoStruct{
-		Name:       name,
-		Vars:       make(map[string]*GoVar),
-		Methods:    make(map[string]*GoMethod),
-		Interfaces: make(map[string]*GoInterface),
-		Extends:    make(map[string]*GoStruct),
+		Name:        name,
+		Vars:        make(map[string]*GoVar),
+		Methods:     make(map[string]*GoMethod),
+		Interfaces:  make(map[string]*GoInterface),
+		Extends:     make(map[string]*GoStruct),
+		__Anonymous: make([]string, 0, 2),
 	}
 
 	return gs
@@ -239,7 +269,6 @@ func CreateGoInterface(name string) *GoInterface {
 func CreateGoAlias(name string) *GoAlias {
 	ga := &GoAlias{
 		Name:       name,
-		Type:       nil,
 		Methods:    make(map[string]*GoMethod),
 		Interfaces: make(map[string]*GoInterface),
 	}
@@ -259,4 +288,16 @@ func CreateGoFunc(name string) *GoFunc {
 
 func CreateGoMethod(name string) *GoMethod {
 	return &GoMethod{GoFunc: *CreateGoFunc(name)}
+}
+
+func (this *GoStruct) AddMethod(method *GoMethod) {
+	this.Methods[method.Name] = method
+}
+
+func (this *GoInterface) AddMethod(method *GoMethod) {
+	this.Methods[method.Name] = method
+}
+
+func (this *GoAlias) AddMethod(method *GoMethod) {
+	this.Methods[method.Name] = method
 }
