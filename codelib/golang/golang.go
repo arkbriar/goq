@@ -18,7 +18,7 @@ func __assert(condition bool) {
 }
 
 type GoProject struct {
-	Name string
+	Name     string
 	Packages map[string]*GoPackage
 }
 
@@ -30,9 +30,26 @@ func __GetFieldTypeName(x ast.Expr) string {
 	var ret string
 	switch x.(type) {
 	case *ast.StarExpr:
-		ret = "*" + x.(*ast.StarExpr).X.(*ast.Ident).Name
+		ret = "*" + __GetFieldTypeName(x.(*ast.StarExpr).X)
 	case *ast.Ident:
 		ret = x.(*ast.Ident).Name
+	case *ast.SelectorExpr:
+		s := x.(*ast.SelectorExpr)
+		ret = __GetFieldTypeName(s.X) + "." + s.Sel.Name
+	case *ast.ArrayType:
+		ret = "[]" + __GetFieldTypeName(x.(*ast.ArrayType).Elt)
+	case *ast.ChanType:
+		ret = "chan " + __GetFieldTypeName(x.(*ast.ChanType).Value)
+	case *ast.MapType:
+		m := x.(*ast.MapType)
+		ret = "map[" + __GetFieldTypeName(m.Key) + "]" + __GetFieldTypeName(m.Value)
+
+	/*
+	 *case *ast.ParenExpr:
+	 *case *ast.StructType:
+	 *case *ast.InterfaceType:
+	 *case *ast.FuncType:
+	 */
 	default:
 		panic("golang/golang.go ## __GetFieldTypeName: should not reach here")
 	}
@@ -54,7 +71,10 @@ func __ResolveStructType(structType *ast.StructType, __struct *GoStruct) {
 
 func __ResolveInterfaceType(interfaceType *ast.InterfaceType, __interface *GoInterface) {
 	for _, field := range interfaceType.Methods.List {
-		__assert(field.Names != nil)
+		if field.Names == nil { // anonymous field
+			__interface.__Anonymous = append(__interface.__Anonymous, __GetFieldTypeName(field.Type))
+			continue
+		}
 		funcName := field.Names[0].Name
 		var funcType *ast.FuncType = nil
 		var ok bool
@@ -77,14 +97,16 @@ func __ResolveFuncType(funcType *ast.FuncType, __function *GoFunc) {
 		__function.Args = append(__function.Args, arg)
 	}
 
-	for _, resultField := range funcType.Results.List {
-		var ret *GoVar
-		if resultField.Names != nil {
-			ret = &GoVar{Name: resultField.Names[0].Name, Type: __GetFieldTypeName(resultField.Type)}
-		} else {
-			ret = &GoVar{Type: __GetFieldTypeName(resultField.Type)}
+	if funcType.Results != nil {
+		for _, resultField := range funcType.Results.List {
+			var ret *GoVar
+			if resultField.Names != nil {
+				ret = &GoVar{Name: resultField.Names[0].Name, Type: __GetFieldTypeName(resultField.Type)}
+			} else {
+				ret = &GoVar{Type: __GetFieldTypeName(resultField.Type)}
+			}
+			__function.Rets = append(__function.Rets, ret)
 		}
-		__function.Rets = append(__function.Rets, ret)
 	}
 }
 
@@ -155,17 +177,8 @@ func __ResolveAllMethods(astFile *ast.File, gfile *GoFile) {
 
 		if funcDecl.Recv.NumFields() == 1 {
 			field := funcDecl.Recv.List[0]
-			var recvTypeName string
 
-			// assume there are only ast.StarExpr & ast.Ident
-			switch field.Type.(type) {
-			case *ast.StarExpr:
-				recvTypeName = field.Type.(*ast.StarExpr).X.(*ast.Ident).Name
-			case *ast.Ident:
-				recvTypeName = field.Type.(*ast.Ident).Name
-			default:
-				panic("golang/golang.go ## __GenerateGoFileFromAstFile: should not reach here")
-			}
+			recvTypeName := __GetFieldTypeName(field.Type)
 
 			methodName := funcDecl.Name.Name
 			funcType := funcDecl.Type
@@ -173,7 +186,6 @@ func __ResolveAllMethods(astFile *ast.File, gfile *GoFile) {
 			thisMethod := CreateGoMethod(methodName)
 
 			// add functions' returns & params
-
 			__ResolveFuncType(funcType, &thisMethod.GoFunc)
 
 			__type := gfile.Ns.GetType(recvTypeName)
@@ -205,7 +217,19 @@ func __IsInterfaceImplemented(methods map[string]*GoMethod, __interface *GoInter
 	return false
 }
 
+//@TODO this function should be fixed. should be recursive
 func __ResolveAllRelations(gfile *GoFile) {
+	// for interface anonymous
+	for _, __interface := range gfile.Ns.GetInterfaces() {
+		for _, anonymous := range __interface.__Anonymous {
+			__a_type := gfile.Ns.GetType(anonymous)
+			// must be interface in interface, otherwise the compiler will give an error
+			__assert(__a_type.Kind == Itf)
+
+			// @TODO
+		}
+	}
+
 	// pick out the structs & interfaces from anonymous that this file knowns
 	for _, __struct := range gfile.Ns.GetStructs() {
 		for _, anonymous := range __struct.__Anonymous {
@@ -262,9 +286,13 @@ func __GenerateGoFileFromAstFile(astFile *ast.File, name string) *GoFile {
 	// package name
 	gfile.Package = astFile.Name.Name
 
-	// imports)
+	// imports
 	for _, __import := range astFile.Imports {
-		gfile.Imports = append(gfile.Imports, __import.Name.Name)
+		if __import.Name != nil { // local package name, include '.'
+			gfile.Imports = append(gfile.Imports, __import.Name.Name)
+		} else {
+			gfile.Imports = append(gfile.Imports, __import.Path.Value)
+		}
 	}
 
 	// language entities: package, constant, type, variable, function(model), label
@@ -345,4 +373,9 @@ func ParseProject(__dir string) (*GoProject, error) {
 	}
 
 	return gpro, nil
+}
+
+func __PrintNamespace(ns *goNamespace) {
+	fmt.Println(ns.Types)
+	fmt.Println(ns.Funcs)
 }

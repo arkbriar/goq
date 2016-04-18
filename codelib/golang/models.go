@@ -32,7 +32,7 @@ func __CreateGoNameSpace() *goNamespace {
 }
 
 func (this *goNamespace) AddType(__type *GoType) error {
-	if _, ok := this.Types[__type.Name()]; !ok {
+	if _, ok := this.Types[__type.Name()]; ok {
 		return errors.New("Type " + __type.Name() + " already exists!")
 	}
 
@@ -42,7 +42,7 @@ func (this *goNamespace) AddType(__type *GoType) error {
 }
 
 func (this *goNamespace) AddFunc(__func *GoFunc) error {
-	if _, ok := this.Funcs[__func.Name]; !ok {
+	if _, ok := this.Funcs[__func.Name]; ok {
 		return errors.New("Function " + __func.Name + " already exists")
 	}
 
@@ -96,6 +96,9 @@ func (this *goNamespace) GetFuncs() []*GoFunc {
 }
 
 func (this *goNamespace) GetType(name string) *GoType {
+	if name[0] == '*' {
+		name = name[1:]
+	}
 	return this.Types[name]
 }
 
@@ -220,8 +223,9 @@ type (
 	}
 
 	GoInterface struct {
-		Name    string               // interface name
-		Methods map[string]*GoMethod // methods
+		Name        string               // interface name
+		Methods     map[string]*GoMethod // methods
+		__Anonymous []string             // anonymous, embedded interfaces
 	}
 
 	GoAlias struct {
@@ -236,9 +240,9 @@ type (
 	}
 
 	GoFunc struct {
-		Name string            // function name
+		Name string   // function name
 		Args []*GoVar // function args
-		Rets []*GoVar          // function rets
+		Rets []*GoVar // function rets
 	}
 
 	GoMethod struct {
@@ -285,8 +289,9 @@ func CreateGoStruct(name string) *GoStruct {
 
 func CreateGoInterface(name string) *GoInterface {
 	gi := &GoInterface{
-		Name:    name,
-		Methods: make(map[string]*GoMethod),
+		Name:        name,
+		Methods:     make(map[string]*GoMethod),
+		__Anonymous: make([]string, 0, 2),
 	}
 
 	return gi
