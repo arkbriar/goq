@@ -8,20 +8,22 @@ import (
 
 	"fmt"
 	"os"
+	"path"
 )
 
-func __assert(assertion bool) {
-	if !assertion {
+func __assert(condition bool) {
+	if !condition {
 		panic("Assertion failed!")
 	}
 }
 
 type GoProject struct {
+	Name string
 	Packages map[string]*GoPackage
 }
 
-func CreateGoProject() *GoProject {
-	return &GoProject{Packages: make(map[string]*GoPackage)}
+func CreateGoProject(name string) *GoProject {
+	return &GoProject{Name: name, Packages: make(map[string]*GoPackage)}
 }
 
 func __GetFieldTypeName(x ast.Expr) string {
@@ -254,7 +256,7 @@ func __ResolveAllRelations(gfile *GoFile) {
 	}
 }
 
-func __GenerateGoFileFromAstFile(astFile *ast.File, name string) (*GoFile, error) {
+func __GenerateGoFileFromAstFile(astFile *ast.File, name string) *GoFile {
 	var gfile *GoFile = CreateGoFile(name)
 
 	// package name
@@ -285,7 +287,7 @@ func __GenerateGoFileFromAstFile(astFile *ast.File, name string) (*GoFile, error
 
 	__ResolveAllRelations(gfile)
 
-	return gfile, nil
+	return gfile
 }
 
 func ParseFile(file *os.File) (*GoFile, error) {
@@ -299,22 +301,48 @@ func ParseFile(file *os.File) (*GoFile, error) {
 		return nil, err
 	}
 
-	var gfile *GoFile
-	if gfile, err = __GenerateGoFileFromAstFile(astFile, file.Name()); err != nil {
-		return nil, err
-	}
+	gfile := __GenerateGoFileFromAstFile(astFile, file.Name())
 
 	return gfile, nil
 }
 
-func __ParsePackage(path string) (*GoPackage, error) {
+func __MergePackageFiles(gpkg *GoPackage) {
 	//@TODO
 
-	return nil, nil
 }
 
-func ParseProject(path string) (map[string]*GoPackage, error) {
-	//@TODO
+func __ParsePackage(pkg *ast.Package, relativePath string) *GoPackage {
+	gpkg := CreateGoPackage(pkg.Name, relativePath)
 
-	return nil, nil
+	for fileName, file := range pkg.Files {
+		gpkg.Files[fileName] = __GenerateGoFileFromAstFile(file, fileName)
+	}
+
+	__MergePackageFiles(gpkg)
+
+	return gpkg
+}
+
+func ParseProject(__dir string) (*GoProject, error) {
+	proName := path.Base(__dir)
+
+	fset := token.NewFileSet()
+
+	var err error = nil
+	var pkgs map[string]*ast.Package = nil
+
+	if pkgs, err = parser.ParseDir(fset, __dir, nil, 0); err != nil {
+		return nil, err
+	}
+
+	gpro := CreateGoProject(proName)
+
+	gpkgs := gpro.Packages
+
+	for packageName, pkg := range pkgs {
+		// @TODO relative path is not considered
+		gpkgs[packageName] = __ParsePackage(pkg, "")
+	}
+
+	return gpro, nil
 }
