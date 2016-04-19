@@ -14,15 +14,4 @@ const (
 
 func main() {
 	fmt.Println("Here is Code Library.")
-
-	db, err:= codelib.ConnectToDB(username, password, url)
-	if err != nil {
-		panic(err.Error())
-	}
-	codelib.SetDB(db)
-
-	err = codelib.ExportFileToDB(os.Args[1])
-	if err != nil {
-		panic(err.Error())
-	}
 }

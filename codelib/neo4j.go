@@ -1,4 +1,5 @@
 // Copyright 2016 ArkBriar. All rights reserved.
+// Copyright 2016 ArkBriar. All rights reserved.
 package codelib
 
 import (
@@ -8,10 +9,6 @@ import (
 )
 
 func __Connect(username, password, url string) (db *neoism.Database, err error) {
-	return neoism.Connect("http://" + username + ":" + password + "@" + url)
-}
-
-func ConnectToDB(username, password, url string) (db *neoism.Database, err error) {
 	return neoism.Connect("http://" + username + ":" + password + "@" + url)
 }
 
@@ -195,7 +192,8 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 		}
 		switch _type.Kind {
 		case golang.Stt:
-			_struct := _type.Type.(*gostruct)
+			__struct := _type.Type.(*golang.GoStruct)
+			_struct := gostruct(*__struct)
 			if structNode, err := _struct.CreateNode(db); err != nil {
 				return root, err
 			} else {
@@ -230,7 +228,8 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 			}
 
 		case golang.Als:
-			_alias := _type.Type.(*goalias)
+			__alias := _type.Type.(*golang.GoAlias)
+			_alias := goalias(*__alias)
 			if aliasNode, err := _alias.CreateNode(db); err != nil {
 				return root, err
 			} else {
@@ -291,7 +290,7 @@ func (this *gointerface) CreateNode(db *neoism.Database) (node *neoism.Node, fir
 	}
 
 	first = node.AddLabel("TYPE", "INTERFACE")
-	return nil, nil
+	return
 }
 
 func (this *gostruct) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {

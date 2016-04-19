@@ -297,9 +297,10 @@ func CreateGoInterface(name string) *GoInterface {
 	return gi
 }
 
-func CreateGoAlias(name string) *GoAlias {
+func CreateGoAlias(name string, __type string) *GoAlias {
 	ga := &GoAlias{
 		Name:       name,
+		Type:       __type,
 		Methods:    make(map[string]*GoMethod),
 		Interfaces: make(map[string]*GoInterface),
 	}

@@ -43,9 +43,10 @@ func __GetFieldTypeName(x ast.Expr) string {
 	case *ast.MapType:
 		m := x.(*ast.MapType)
 		ret = "map[" + __GetFieldTypeName(m.Key) + "]" + __GetFieldTypeName(m.Value)
+	case *ast.ParenExpr:
+		ret = __GetFieldTypeName(x.(*ast.ParenExpr).X)
 
 	/*
-	 *case *ast.ParenExpr:
 	 *case *ast.StructType:
 	 *case *ast.InterfaceType:
 	 *case *ast.FuncType:
@@ -114,22 +115,15 @@ func __ResolveType(typeSpec *ast.TypeSpec, gfile *GoFile) {
 	Name := typeSpec.Name.Name
 
 	switch typeSpec.Type.(type) {
-	case *ast.Ident:
-		fmt.Fprintln(os.Stderr, Name+" is skipped.")
-	case *ast.ParenExpr:
-		fmt.Fprintln(os.Stderr, Name+" is skipped.")
-	case *ast.SelectorExpr:
-		fmt.Fprintln(os.Stderr, Name+" is skipped.")
-	case *ast.StarExpr:
-		fmt.Fprintln(os.Stderr, Name+" is skipped.")
-	case *ast.ArrayType:
-		fmt.Fprintln(os.Stderr, Name+" is skipped.")
-	case *ast.ChanType:
-		fmt.Fprintln(os.Stderr, Name+" is skipped.")
-	case *ast.MapType:
-		/* lay aside these branches */
-		//@TODO
-		fmt.Fprintln(os.Stderr, Name+" is skipped.")
+	/*
+	 *case *ast.Ident:
+	 *case *ast.ParenExpr:
+	 *case *ast.SelectorExpr:
+	 *case *ast.StarExpr:
+	 *case *ast.ArrayType:
+	 *case *ast.ChanType:
+	 *case *ast.MapType:
+	 */
 
 	case *ast.StructType:
 		__struct := CreateGoStruct(Name)
@@ -146,6 +140,9 @@ func __ResolveType(typeSpec *ast.TypeSpec, gfile *GoFile) {
 		__ResolveFuncType(typeSpec.Type.(*ast.FuncType), __function)
 		_ = gfile.Ns.AddFunc(__function)
 
+	default:
+		__alias := CreateGoAlias(Name, __GetFieldTypeName(typeSpec.Type))
+		_ = gfile.Ns.AddType(CreateGoTypeOfAlias(__alias))
 	}
 }
 
@@ -299,14 +296,19 @@ func __GenerateGoFileFromAstFile(astFile *ast.File, name string) *GoFile {
 	// in ast.File.Scope.Objects, but there are no models
 
 	for _, obj := range astFile.Scope.Objects {
-		if obj.Kind != ast.Typ {
-			continue
-		}
-
-		if typeSpec, ok := obj.Decl.(*ast.TypeSpec); ok {
-			__ResolveType(typeSpec, gfile)
-		} else {
-			panic("golang/golang.go ## __GenerateGoFileFromAstFile: should not reach here")
+		if obj.Kind == ast.Typ {
+			if typeSpec, ok := obj.Decl.(*ast.TypeSpec); ok {
+				__ResolveType(typeSpec, gfile)
+			} else {
+				panic("golang/golang.go ## __GenerateGoFileFromAstFile: should not reach here")
+			}
+		} else if obj.Kind == ast.Fun {
+			if funcDecl, ok := obj.Decl.(*ast.FuncDecl); ok {
+				funcType := funcDecl.Type
+				__function := CreateGoFunc(funcDecl.Name.Name)
+				__ResolveFuncType(funcType, __function)
+				gfile.Ns.AddFunc(__function)
+			}
 		}
 	}
 
@@ -375,6 +377,7 @@ func ParseProject(__dir string) (*GoProject, error) {
 	return gpro, nil
 }
 
+// this function is only for test
 func __PrintNamespace(ns *goNamespace) {
 	fmt.Println(ns.Types)
 	fmt.Println(ns.Funcs)

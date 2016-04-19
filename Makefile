@@ -7,8 +7,8 @@ default: binary
 binary:
 	@ $(BASH) hack/make.sh BINARY
 
-test: build
-	hack/test.sh
+test:
+	@ $(BASH) hack/test.sh
 
 clean:
 	- rm main
