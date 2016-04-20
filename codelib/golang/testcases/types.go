@@ -21,6 +21,10 @@ type B interface {
 	m(a int) error
 }
 
+func (this *A) m(a int) error {
+	return nil
+}
+
 func C() {
 
 }

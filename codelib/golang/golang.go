@@ -203,15 +203,15 @@ func __ResolveAllMethods(astFile *ast.File, gfile *GoFile) {
 func __IsInterfaceImplemented(methods map[string]*GoMethod, __interface *GoInterface) bool {
 	for name, imethod := range __interface.Methods {
 		if method, ok := methods[name]; !ok { // not found
-			break
+			return false
 		} else {
-			if method.Equal(imethod) {
-				return true
+			if !method.Equal(imethod) {
+				return false
 			}
 		}
 	}
 
-	return false
+	return true
 }
 
 //@TODO this function should be fixed. should be recursive
@@ -222,8 +222,8 @@ func __ResolveAllRelations(gfile *GoFile) {
 			__a_type := gfile.Ns.GetType(anonymous)
 			// must be interface in interface, otherwise the compiler will give an error
 			__assert(__a_type.Kind == Itf)
-
-			// @TODO
+			__a_itf := __a_type.Type.(*GoInterface)
+			__interface.Extends[anonymous] = __a_itf
 		}
 	}
 
@@ -236,6 +236,10 @@ func __ResolveAllRelations(gfile *GoFile) {
 				__struct.Extends[anonymous] = __a_type.Type.(*GoStruct)
 			case Itf:
 				__struct.Interfaces[anonymous] = __a_type.Type.(*GoInterface)
+				// delete these functions (existance ensured by compiler)
+				for methodName, _ := range __a_type.Type.(*GoInterface).Methods {
+					delete(__struct.Methods, methodName)
+				}
 			case Als:
 			case Bti:
 			default:
@@ -247,7 +251,7 @@ func __ResolveAllRelations(gfile *GoFile) {
 	// find out interfaces implemented by type
 
 	for _, __type := range gfile.Ns.GetTypes() {
-		if __type.Kind != Stt || __type.Kind != Als {
+		if __type.Kind != Stt && __type.Kind != Als {
 			continue
 		}
 
@@ -271,6 +275,10 @@ func __ResolveAllRelations(gfile *GoFile) {
 			}
 			if __IsInterfaceImplemented(Methods, __interface) {
 				Interfaces[__interface.Name] = __interface
+				// delete these functions (existance ensured by compiler)
+				for methodName, _ := range __interface.Methods {
+					delete(Methods, methodName)
+				}
 			}
 		}
 

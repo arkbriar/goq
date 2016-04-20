@@ -111,7 +111,7 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 
 	__assert(root != nil, "codelib/neo4j.go ## gofile.Write: root should not be nil, something wrong with creation")
 
-	// store types (structs and aliass)
+	// store types (structs) and interfaces
 	var NODES map[interface{}]*neoism.Node = make(map[interface{}]*neoism.Node)
 
 	// imports
@@ -138,7 +138,7 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 		}
 	}
 
-	__ProcessMethods := func (methods map[string]*golang.GoMethod, node *neoism.Node) error {
+	__ProcessMethods := func(methods map[string]*golang.GoMethod, node *neoism.Node) error {
 		for _, _method := range methods {
 			method := gomethod(*_method)
 			if methodNode, err := method.CreateNode(db); err != nil {
@@ -159,6 +159,8 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 		if interfaceNode, err := _interface.CreateNode(db); err != nil {
 			return root, err
 		} else {
+			// store interfaces of this package
+			NODES[__interface] = interfaceNode
 			if _, err := root.Relate("DEFINE", interfaceNode.Id(), neoism.Props{}); err != nil {
 				return root, err
 			}
@@ -170,15 +172,22 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 		}
 	}
 
-	__ProcessImplements := func (interfaces map[string]*golang.GoInterface, node *neoism.Node) error {
+	__ProcessImplements := func(interfaces map[string]*golang.GoInterface, node *neoism.Node) error {
 		for _, __interface := range interfaces {
 			_interface := gointerface(*__interface)
-			if interfaceNode, err := _interface.CreateNode(db); err != nil {
-				return err
-			} else {
-				if _, err := node.Relate("IMPLEMENT", interfaceNode.Id(), neoism.Props{}); err != nil {
+			var interfaceNode *neoism.Node = nil
+			var err error = nil
+			var ok bool = false
+			// if there's no before, we should create it.
+			if interfaceNode, ok = NODES[__interface]; !ok {
+				if interfaceNode, err = _interface.CreateNode(db); err != nil {
 					return err
+				} else {
+					NODES[__interface] = interfaceNode
 				}
+			}
+			if _, err := node.Relate("IMPLEMENT", interfaceNode.Id(), neoism.Props{}); err != nil {
+				return err
 			}
 		}
 

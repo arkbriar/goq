@@ -3,6 +3,7 @@ package golang
 
 import (
 	"errors"
+	"fmt"
 )
 
 type nsMethods interface {
@@ -138,6 +139,10 @@ func (this *GoType) Name() string {
 	return name
 }
 
+func (this *GoType) String() string {
+	return this.Type.(fmt.Stringer).String()
+}
+
 func CreateGoTypeOfStruct(__type *GoStruct) *GoType {
 	return &GoType{
 		Kind: Stt,
@@ -223,9 +228,10 @@ type (
 	}
 
 	GoInterface struct {
-		Name        string               // interface name
-		Methods     map[string]*GoMethod // methods
-		__Anonymous []string             // anonymous, embedded interfaces
+		Name        string                  // interface name
+		Methods     map[string]*GoMethod    // methods
+		Extends     map[string]*GoInterface // extend interfaces
+		__Anonymous []string                // anonymous, embedded interfaces
 	}
 
 	GoAlias struct {
@@ -291,6 +297,7 @@ func CreateGoInterface(name string) *GoInterface {
 	gi := &GoInterface{
 		Name:        name,
 		Methods:     make(map[string]*GoMethod),
+		Extends:     make(map[string]*GoInterface),
 		__Anonymous: make([]string, 0, 2),
 	}
 
@@ -360,4 +367,89 @@ func (this *GoMethod) Equal(other *GoMethod) bool {
 	}
 
 	return true
+}
+
+func (this *GoStruct) String() string {
+	var ret string = "STRUCT " + this.Name
+	var blank bool = false
+	var with bool = false
+	if len(this.Methods) != 0 {
+		blank = true
+		ret += " WITH METHODS: "
+		with = true
+		for key, _ := range this.Methods {
+			ret += key + " "
+		}
+	}
+	if len(this.Extends) != 0 {
+		blank = true
+		if with {
+			ret += " AND"
+		} else {
+			ret += " WITH"
+		}
+		ret += " EXTENDS: "
+		with = true
+		for key, _ := range this.Extends {
+			ret += key + " "
+		}
+	}
+	if len(this.Interfaces) != 0 {
+		blank = true
+		if with {
+			ret += " AND"
+		} else {
+			ret += " WITH"
+		}
+		ret += " INTERFACES: "
+		for key, _ := range this.Interfaces {
+			ret += key + " "
+		}
+	}
+	if !blank {
+		ret += " "
+	}
+	return ret + "|"
+}
+
+func (this *GoInterface) String() string {
+	var ret string = "INTERFACE " + this.Name + " WITH METHODS: "
+	for key, _ := range this.Methods {
+		ret += key + " "
+	}
+	return ret + "|"
+}
+
+func (this *GoAlias) String() string {
+	var ret string = "ALIAS " + this.Name + " OF " + this.Type
+	var blank bool = false
+	var with bool = false
+	if len(this.Methods) != 0 {
+		blank = true
+		ret += " WITH METHODS: "
+		with = true
+		for key, _ := range this.Methods {
+			ret += key + " "
+		}
+	}
+	if len(this.Interfaces) != 0 {
+		blank = true
+		if with {
+			ret += " AND"
+		} else {
+			ret += " WITH"
+		}
+		ret += " INTERFACES: "
+		for key, _ := range this.Interfaces {
+			ret += key + " "
+		}
+	}
+	if !blank {
+		ret += " "
+	}
+	return ret + "|"
+}
+
+func (this *GoBuiltin) String() string {
+	return this.Name + " |"
 }
