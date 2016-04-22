@@ -156,18 +156,44 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 	// interfaces
 	for _, __interface := range this.Ns.GetInterfaces() {
 		_interface := gointerface(*__interface)
-		if interfaceNode, err := _interface.CreateNode(db); err != nil {
-			return root, err
-		} else {
-			// store interfaces of this package
-			NODES[__interface] = interfaceNode
-			if _, err := root.Relate("DEFINE", interfaceNode.Id(), neoism.Props{}); err != nil {
-				return root, err
-			}
 
-			// methods
-			if err := __ProcessMethods(_interface.Methods, interfaceNode); err != nil {
+		// if not found in NODES, then create it
+		var interfaceNode *neoism.Node = nil
+		var err error = nil
+		var ok bool = false
+
+		if interfaceNode, ok = NODES[__interface]; !ok {
+			if interfaceNode, err = _interface.CreateNode(db); err != nil {
 				return root, err
+			} else {
+				// store interfaces of this package
+				NODES[__interface] = interfaceNode
+			}
+		}
+
+		if _, err := root.Relate("DEFINE", interfaceNode.Id(), neoism.Props{}); err != nil {
+			return root, err
+		}
+
+		// methods
+		if err := __ProcessMethods(_interface.Methods, interfaceNode); err != nil {
+			return root, err
+		}
+	}
+
+	// processing interface extends
+	for _, __interface := range this.Ns.GetInterfaces() {
+		for _, _extend := range __interfaces.Extends {
+			if interfaceNode, ok := NODES[__interface]; !ok {
+				panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+			} else {
+				if extendNode, ok := NODES[_extend]; !ok {
+					panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+				} else {
+					if _, err := interfaceNode.Relate("EXTEND", extendNode.Id(), neoism.Props{}); err != nil {
+						return root, err
+					}
+				}
 			}
 		}
 	}
@@ -217,23 +243,6 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 				if err := __ProcessImplements(_struct.Interfaces, structNode); err != nil {
 					return root, err
 				}
-				// then extends
-
-				for _, _extend := range _struct.Extends {
-					var extendNode *neoism.Node = nil
-					var ok bool = false
-					// if not created, then create it
-					if extendNode, ok = NODES[_extend]; !ok {
-						extend := gostruct(*_extend)
-						var err error
-						if extendNode, err = extend.CreateNode(db); err != nil {
-							return root, err
-						}
-					}
-					if _, err := structNode.Relate("EXTEND", extendNode.Id(), neoism.Props{}); err != nil {
-						return root, err
-					}
-				}
 			}
 
 		case golang.Als:
@@ -262,6 +271,23 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 		}
 	}
 
+	// processing struct's extends
+	for _, __struct := range this.Ns.GetStructs() {
+		for _, _extend := range __struct.Extends {
+			if structNode, ok := NODES[__struct]; !ok {
+				panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+			} else {
+				if extendNode, ok := NODES[_extend]; !ok {
+					panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+				} else {
+					if _, err := structNode.Relate("EXTEND", extendNode.Id(), neoism.Props{}); err != nil {
+						return root, err
+					}
+				}
+			}
+		}
+	}
+
 	return root, nil
 }
 
@@ -274,6 +300,64 @@ type (
 	gofunc      golang.GoFunc
 	gomethod    golang.GoMethod
 )
+
+// should always called with *GoFile, *GoPackage and *GoProject, otherwise it will trigger a panic
+func ConvertGoXxxIntoNeo4jMap(goxxx interface{}) Neo4jMap {
+	var ret Neo4jMap = nil
+	switch goxxx.(type) {
+	case *golang.GoFile:
+		tmp := gofile(*goxxx.(*golang.GoFile))
+		ret = &tmp
+	case *golang.GoPackage:
+		tmp := gopkg(*goxxx.(*golang.GoPackage))
+		ret = &tmp
+	case *golang.GoProject:
+		tmp := gopro(*goxxx.(*golang.GoProject))
+		ret = &tmp
+	default:
+		__assert(false, "codelib/neo4j.go ## ConvertGoXxxIntoNeo4jMap: should not reach here, check your code.")
+	}
+
+	return ret
+}
+
+// should always called with *GoXxx or string, otherwise it will trigger a panic
+func ConvertGoXxxIntoNeo4jNode(goxxx interface{}) Neo4jNode {
+	var ret Neo4jNode = nil
+	switch goxxx.(type) {
+	case *golang.GoFile:
+		tmp := gofile(*goxxx.(*golang.GoFile))
+		ret = &tmp
+	case *golang.GoPackage:
+		tmp := gopkg(*goxxx.(*golang.GoPackage))
+		ret = &tmp
+	case *golang.GoProject:
+		tmp := gopro(*goxxx.(*golang.GoProject))
+		ret = &tmp
+	case *golang.GoStruct:
+		tmp := gostruct(*goxxx.(*golang.GoStruct))
+		ret = &tmp
+	case *golang.GoAlias:
+		tmp := goalias(*goxxx.(*golang.GoAlias))
+		ret = &tmp
+	case string:
+		tmp := goimport(goxxx.(string))
+		ret = &tmp
+	case *golang.GoInterface:
+		tmp := gointerface(*goxxx.(*golang.GoInterface))
+		ret = &tmp
+	case *golang.GoFunc:
+		tmp := gofunc(*goxxx.(*golang.GoFunc))
+		ret = &tmp
+	case *golang.GoMethod:
+		tmp := gomethod(*goxxx.(*golang.GoMethod))
+		ret = &tmp
+	default:
+		__assert(false, "codelib/neo4j.go ## ConvertGoXxxIntoNeo4jNode: should not reach here, check your code.")
+	}
+
+	return ret
+}
 
 func (this *gofile) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
 	if node, first = db.CreateNode(neoism.Props{"name": this.Name}); first != nil {
