@@ -6,6 +6,10 @@ import (
 	"fmt"
 )
 
+func _IsUpper(b byte) bool {
+	return b >= 'A' && b <= 'Z'
+}
+
 type nsMethods interface {
 	AddType(__type *GoType) error
 	AddFunc(__func *GoFunc) error
@@ -105,6 +109,11 @@ func (this *goNamespace) GetType(name string) *GoType {
 
 func (this *goNamespace) GetFunc(name string) *GoFunc {
 	return this.Funcs[name]
+}
+
+// if the first rune of symbol is uppercase, then it's public; else private
+func IsPublic(symbol string) bool {
+	return _IsUpper(symbol[0])
 }
 
 type TypeKind int
@@ -258,6 +267,25 @@ type (
 	}
 )
 
+func (this *GoPackage) String() string {
+	ret := "[PACKAGE]" + this.Name + ": \n"
+
+	for _, file := range this.Files {
+		ret += file.String() + "\n"
+	}
+
+	// delete the last '\n'
+	if len(this.Files) != 0 {
+		return ret[0 : len(ret)-1]
+	}
+
+	return ret
+}
+
+func (this *GoFile) String() string {
+	return "[FILE]" + this.Name + " ## Types: " + fmt.Sprint(this.Ns.Types) + " | Funcs: " + fmt.Sprint(this.Ns.Funcs)
+}
+
 func CreateGoPackage(name string, relativePath string) *GoPackage {
 	gp := &GoPackage{
 		Name:         name,
@@ -270,6 +298,10 @@ func CreateGoPackage(name string, relativePath string) *GoPackage {
 	return gp
 }
 
+func (this *GoPackage) N() string {
+	return this.Name
+}
+
 func CreateGoFile(name string) *GoFile {
 	gf := &GoFile{
 		Name:    name,
@@ -278,6 +310,10 @@ func CreateGoFile(name string) *GoFile {
 	}
 
 	return gf
+}
+
+func (this *GoFile) N() string {
+	return this.Name
 }
 
 func CreateGoStruct(name string) *GoStruct {
@@ -293,6 +329,14 @@ func CreateGoStruct(name string) *GoStruct {
 	return gs
 }
 
+func (this *GoStruct) N() string {
+	return this.Name
+}
+
+func (this *GoStruct) IsPublic() bool {
+	return _IsUpper(this.Name[0])
+}
+
 func CreateGoInterface(name string) *GoInterface {
 	gi := &GoInterface{
 		Name:        name,
@@ -302,6 +346,14 @@ func CreateGoInterface(name string) *GoInterface {
 	}
 
 	return gi
+}
+
+func (this *GoInterface) N() string {
+	return this.Name
+}
+
+func (this *GoInterface) IsPublic() bool {
+	return _IsUpper(this.Name[0])
 }
 
 func CreateGoAlias(name string, __type string) *GoAlias {
@@ -315,6 +367,14 @@ func CreateGoAlias(name string, __type string) *GoAlias {
 	return ga
 }
 
+func (this *GoAlias) N() string {
+	return this.Name
+}
+
+func (this *GoAlias) IsPublic() bool {
+	return _IsUpper(this.Name[0])
+}
+
 func CreateGoFunc(name string) *GoFunc {
 	gf := &GoFunc{
 		Name: name,
@@ -323,6 +383,14 @@ func CreateGoFunc(name string) *GoFunc {
 	}
 
 	return gf
+}
+
+func (this *GoFunc) N() string {
+	return this.Name
+}
+
+func (this *GoFunc) IsPublic() bool {
+	return _IsUpper(this.Name[0])
 }
 
 func CreateGoMethod(name string) *GoMethod {
@@ -370,11 +438,9 @@ func (this *GoMethod) Equal(other *GoMethod) bool {
 }
 
 func (this *GoStruct) String() string {
-	var ret string = "STRUCT " + this.Name
-	var blank bool = false
+	var ret string = "[STRUCT] " + this.Name
 	var with bool = false
 	if len(this.Methods) != 0 {
-		blank = true
 		ret += " WITH METHODS: "
 		with = true
 		for key, _ := range this.Methods {
@@ -382,7 +448,6 @@ func (this *GoStruct) String() string {
 		}
 	}
 	if len(this.Extends) != 0 {
-		blank = true
 		if with {
 			ret += " AND"
 		} else {
@@ -395,7 +460,6 @@ func (this *GoStruct) String() string {
 		}
 	}
 	if len(this.Interfaces) != 0 {
-		blank = true
 		if with {
 			ret += " AND"
 		} else {
@@ -406,26 +470,21 @@ func (this *GoStruct) String() string {
 			ret += key + " "
 		}
 	}
-	if !blank {
-		ret += " "
-	}
-	return ret + "|"
+	return ret
 }
 
 func (this *GoInterface) String() string {
-	var ret string = "INTERFACE " + this.Name + " WITH METHODS: "
+	var ret string = "[INTERFACE] " + this.Name + " WITH METHODS: "
 	for key, _ := range this.Methods {
 		ret += key + " "
 	}
-	return ret + "|"
+	return ret
 }
 
 func (this *GoAlias) String() string {
-	var ret string = "ALIAS " + this.Name + " OF " + this.Type
-	var blank bool = false
+	var ret string = "[ALIAS] " + this.Name + " OF " + this.Type
 	var with bool = false
 	if len(this.Methods) != 0 {
-		blank = true
 		ret += " WITH METHODS: "
 		with = true
 		for key, _ := range this.Methods {
@@ -433,7 +492,6 @@ func (this *GoAlias) String() string {
 		}
 	}
 	if len(this.Interfaces) != 0 {
-		blank = true
 		if with {
 			ret += " AND"
 		} else {
@@ -444,12 +502,9 @@ func (this *GoAlias) String() string {
 			ret += key + " "
 		}
 	}
-	if !blank {
-		ret += " "
-	}
-	return ret + "|"
+	return ret
 }
 
 func (this *GoBuiltin) String() string {
-	return this.Name + " |"
+	return this.Name
 }

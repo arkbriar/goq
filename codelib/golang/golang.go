@@ -214,7 +214,6 @@ func __IsInterfaceImplemented(methods map[string]*GoMethod, __interface *GoInter
 	return true
 }
 
-//@TODO this function should be fixed. should be recursive
 func __ResolveAllRelations(gfile *GoFile) {
 	// for interface anonymous
 	for _, __interface := range gfile.Ns.GetInterfaces() {
@@ -249,7 +248,6 @@ func __ResolveAllRelations(gfile *GoFile) {
 	}
 
 	// find out interfaces implemented by type
-
 	for _, __type := range gfile.Ns.GetTypes() {
 		if __type.Kind != Stt && __type.Kind != Als {
 			continue
@@ -281,8 +279,11 @@ func __ResolveAllRelations(gfile *GoFile) {
 				}
 			}
 		}
-
 	}
+	/*
+	 * Type's Methods += Type's Extends' Methods + Types's Interfaces' Methods
+	 * Type's Interfaces += Type's Extends's Interfaces
+	 */
 }
 
 func __GenerateGoFileFromAstFile(astFile *ast.File, name string) *GoFile {
@@ -320,11 +321,6 @@ func __GenerateGoFileFromAstFile(astFile *ast.File, name string) *GoFile {
 		}
 	}
 
-	// methods of struct and alias
-	__ResolveAllMethods(astFile, gfile)
-
-	__ResolveAllRelations(gfile)
-
 	return gfile
 }
 
@@ -341,12 +337,162 @@ func ParseFile(file *os.File) (*GoFile, error) {
 
 	gfile := __GenerateGoFileFromAstFile(astFile, file.Name())
 
+	// methods of struct and alias
+	__ResolveAllMethods(astFile, gfile)
+
+	__ResolveAllRelations(gfile)
+
 	return gfile, nil
 }
 
-func __MergePackageFiles(gpkg *GoPackage) {
-	//@TODO
+func (this *GoPackage) GetType(name string) *GoType {
+	for _, file := range this.Files {
+		if __type := file.Ns.GetType(name); __type != nil {
+			return __type
+		}
+	}
+	return nil
+}
 
+// gfile must be one file in gpkg
+func __ResolveAllMethodsInPackage(astFile *ast.File, gpkg *GoPackage) {
+	/*
+		Decls:
+		BadDecl,
+		FuncDecl,
+		GenDecl ( represents an import, constant, type or variable declaration )
+	*/
+
+	for _, decl := range astFile.Decls {
+		var funcDecl *ast.FuncDecl = nil
+		switch decl.(type) {
+		case *ast.FuncDecl:
+			funcDecl = decl.(*ast.FuncDecl)
+		case *ast.GenDecl:
+			continue
+		case *ast.BadDecl:
+			continue
+		}
+
+		__assert(funcDecl != nil)
+
+		// functions filter
+		if funcDecl.Recv == nil {
+			continue
+		}
+
+		if funcDecl.Recv.NumFields() == 1 {
+			field := funcDecl.Recv.List[0]
+
+			recvTypeName := __GetFieldTypeName(field.Type)
+
+			methodName := funcDecl.Name.Name
+			funcType := funcDecl.Type
+
+			thisMethod := CreateGoMethod(methodName)
+
+			// add functions' returns & params
+			__ResolveFuncType(funcType, &thisMethod.GoFunc)
+
+			__type := gpkg.GetType(recvTypeName)
+
+			__assert(__type.Kind == Stt || __type.Kind == Als)
+
+			if __type.Kind == Stt { // struct
+				__StructType := __type.Type.(*GoStruct)
+				__StructType.AddMethod(thisMethod)
+			} else { // alias
+				__AliasType := __type.Type.(*GoAlias)
+				__AliasType.AddMethod(thisMethod)
+			}
+		}
+	}
+}
+
+// gfile must be one file in gpkg
+func __ResolveAllRelationsInPackage(gfile *GoFile, gpkg *GoPackage) {
+	// for interface anonymous
+	for _, __interface := range gfile.Ns.GetInterfaces() {
+		for _, anonymous := range __interface.__Anonymous {
+			__a_type := gpkg.GetType(anonymous)
+			// must be interface in interface, otherwise the compiler will give an error
+			__assert(__a_type.Kind == Itf)
+			__a_itf := __a_type.Type.(*GoInterface)
+			__interface.Extends[anonymous] = __a_itf
+		}
+	}
+
+	// pick out the structs & interfaces from anonymous that this file knowns
+	for _, __struct := range gfile.Ns.GetStructs() {
+		for _, anonymous := range __struct.__Anonymous {
+			__a_type := gpkg.GetType(anonymous)
+			switch __a_type.Kind {
+			case Stt:
+				__struct.Extends[anonymous] = __a_type.Type.(*GoStruct)
+			case Itf:
+				__struct.Interfaces[anonymous] = __a_type.Type.(*GoInterface)
+				// delete these functions (existance ensured by compiler)
+				for methodName, _ := range __a_type.Type.(*GoInterface).Methods {
+					delete(__struct.Methods, methodName)
+				}
+			case Als:
+			case Bti:
+			default:
+				panic("golang/golang.go ## __ResolveAllRelations: should not reach here")
+			}
+		}
+	}
+
+	// find out interfaces implemented by type
+	for _, __type := range gfile.Ns.GetTypes() {
+		if __type.Kind != Stt && __type.Kind != Als {
+			continue
+		}
+
+		var Methods map[string]*GoMethod = nil
+		var Interfaces map[string]*GoInterface = nil
+
+		if __type.Kind == Stt {
+			Methods = __type.Type.(*GoStruct).Methods
+			Interfaces = __type.Type.(*GoStruct).Interfaces
+		} else {
+			Methods = __type.Type.(*GoAlias).Methods
+			Interfaces = __type.Type.(*GoAlias).Interfaces
+		}
+
+		__assert(Methods != nil && Interfaces != nil)
+
+		for _, _gfile := range gpkg.Files {
+			for _, __interface := range _gfile.Ns.GetInterfaces() {
+				if _, ok := Interfaces[__interface.Name]; ok {
+					// skip
+					continue
+				}
+				if __IsInterfaceImplemented(Methods, __interface) {
+					Interfaces[__interface.Name] = __interface
+					// delete these functions (existance ensured by compiler)
+					for methodName, _ := range __interface.Methods {
+						delete(Methods, methodName)
+					}
+				}
+			}
+		}
+	}
+	/*
+	 * Type's Methods += Type's Extends' Methods + Types's Interfaces' Methods
+	 * Type's Interfaces += Type's Extends's Interfaces
+	 */
+}
+
+func __MergePackageFiles(pkg *ast.Package, gpkg *GoPackage) {
+	// methods of struct and alias
+	for _, file := range pkg.Files {
+		__ResolveAllMethodsInPackage(file, gpkg)
+	}
+
+	for _, gfile := range gpkg.Files {
+		__ResolveAllRelationsInPackage(gfile, gpkg)
+	}
 }
 
 func __ParsePackage(pkg *ast.Package, relativePath string) *GoPackage {
@@ -356,7 +502,7 @@ func __ParsePackage(pkg *ast.Package, relativePath string) *GoPackage {
 		gpkg.Files[fileName] = __GenerateGoFileFromAstFile(file, fileName)
 	}
 
-	__MergePackageFiles(gpkg)
+	__MergePackageFiles(pkg, gpkg)
 
 	return gpkg
 }

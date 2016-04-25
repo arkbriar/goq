@@ -4,6 +4,7 @@ package codelib
 
 import (
 	"codelib/golang"
+	"fmt"
 
 	"github.com/jmcvetta/neoism"
 )
@@ -183,14 +184,22 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 
 	// processing interface extends
 	for _, __interface := range this.Ns.GetInterfaces() {
-		for _, _extend := range __interfaces.Extends {
+
+		// when there's only one extend and no other methods, the two interface are equal
+		var RELATIONSHIP string
+		if len(__interface.Extends) == 1 && len(__interface.Methods) == 0 {
+			RELATIONSHIP = "EQUAL_TO"
+		} else {
+			RELATIONSHIP = "EXTEND"
+		}
+		for _, _extend := range __interface.Extends {
 			if interfaceNode, ok := NODES[__interface]; !ok {
 				panic("codelib/neo4j.go ## gfile.Write: should not reach here")
 			} else {
 				if extendNode, ok := NODES[_extend]; !ok {
 					panic("codelib/neo4j.go ## gfile.Write: should not reach here")
 				} else {
-					if _, err := interfaceNode.Relate("EXTEND", extendNode.Id(), neoism.Props{}); err != nil {
+					if _, err := interfaceNode.Relate(RELATIONSHIP, extendNode.Id(), neoism.Props{}); err != nil {
 						return root, err
 					}
 				}
@@ -359,6 +368,13 @@ func ConvertGoXxxIntoNeo4jNode(goxxx interface{}) Neo4jNode {
 	return ret
 }
 
+func _Public(public bool) string {
+	if public {
+		return "PUBLIC"
+	}
+	return "PRIVATE"
+}
+
 func (this *gofile) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
 	if node, first = db.CreateNode(neoism.Props{"name": this.Name}); first != nil {
 		return
@@ -373,7 +389,7 @@ func (this *goalias) CreateNode(db *neoism.Database) (node *neoism.Node, first e
 		return
 	}
 
-	first = node.AddLabel("TYPE", "ALIAS")
+	first = node.AddLabel("TYPE", "ALIAS", _Public((*golang.GoAlias)(this).IsPublic()))
 	return
 }
 
@@ -382,7 +398,7 @@ func (this *gointerface) CreateNode(db *neoism.Database) (node *neoism.Node, fir
 		return
 	}
 
-	first = node.AddLabel("TYPE", "INTERFACE")
+	first = node.AddLabel("TYPE", "INTERFACE", _Public((*golang.GoInterface)(this).IsPublic()))
 	return
 }
 
@@ -391,7 +407,7 @@ func (this *gostruct) CreateNode(db *neoism.Database) (node *neoism.Node, first 
 		return
 	}
 
-	first = node.AddLabel("TYPE", "STRUCT")
+	first = node.AddLabel("TYPE", "STRUCT", _Public((*golang.GoStruct)(this).IsPublic()))
 	return
 }
 
@@ -400,7 +416,7 @@ func (this *gofunc) CreateNode(db *neoism.Database) (node *neoism.Node, first er
 		return
 	}
 
-	first = node.AddLabel("FUNCTION")
+	first = node.AddLabel("FUNCTION", _Public((*golang.GoFunc)(this).IsPublic()))
 	return
 }
 

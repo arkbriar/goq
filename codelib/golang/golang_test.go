@@ -8,6 +8,9 @@ import (
 
 const (
 	testdir = "testcases"
+	filecase1 = "types.go"
+	filecase2 = "ast.go"
+	pkgcase1 = "pkgtest"
 )
 
 func __TestParseFile(t *testing.T, file string) *GoFile{
@@ -32,4 +35,14 @@ func TestParseFile(t *testing.T) {
 
 func TestParseFile2(t *testing.T) {
 	__TestParseFile(t, "ast.go")
+}
+
+func TestParRePackage(t *testing.T) {
+	if gpro, err := ParseProject(testdir + "/" + pkgcase1); err != nil {
+		t.Fatal(err)
+	} else {
+		for _, pkg := range gpro.Packages {
+			t.Log(pkg)
+		}
+	}
 }
