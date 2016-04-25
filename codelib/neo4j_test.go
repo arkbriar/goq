@@ -63,20 +63,22 @@ func __TestParseFile(t *testing.T, file string) *golang.GoFile {
  *}
  */
 
-func TestExportGoPackageToNeo4j1(t *testing.T) {
-	if db, err := __Connect(username, password, url); err != nil {
-		t.Fatal(err)
-	} else {
-		if _gpro, err := golang.ParseProject(testdir + "/" + pkgcase_1); err != nil {
-			t.Fatal(err)
-		} else {
-			gpro := gopro(*_gpro)
-			if _, err := gpro.Write(db); err != nil {
-				t.Fatal(err)
-			}
-		}
-	}
-}
+/*
+ *func TestExportGoPackageToNeo4j1(t *testing.T) {
+ *    if db, err := __Connect(username, password, url); err != nil {
+ *        t.Fatal(err)
+ *    } else {
+ *        if _gpro, err := golang.ParseProject(testdir + "/" + pkgcase_1); err != nil {
+ *            t.Fatal(err)
+ *        } else {
+ *            gpro := gopro(*_gpro)
+ *            if _, err := gpro.Write(db); err != nil {
+ *                t.Fatal(err)
+ *            }
+ *        }
+ *    }
+ *}
+ */
 
 /*
  *func TestExportGoPackageToNeo4j2(t *testing.T) {
@@ -94,3 +96,18 @@ func TestExportGoPackageToNeo4j1(t *testing.T) {
  *    }
  *}
  */
+
+func TestSelfParse(t *testing.T) {
+	if db, err := __Connect(username, password, url); err != nil {
+		t.Fatal(err)
+	} else {
+		if _gpro, err := golang.ParseProject("."); err != nil {
+			t.Fatal(err)
+		} else {
+			gpro := gopro(*_gpro)
+			if _, err := gpro.Write(db); err != nil {
+				t.Fatal(err)
+			}
+		}
+	}
+}

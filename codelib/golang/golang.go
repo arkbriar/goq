@@ -475,7 +475,7 @@ func __ResolveAllRelationsInPackage(gfile *GoFile, gpkg *GoPackage) {
 			default:
 				panic("golang/golang.go ## __ResolveAllRelations: should not reach here")
 			}
-		}
+
 	}
 
 	// find out interfaces implemented by type
@@ -543,6 +543,7 @@ func __ParsePackage(pkg *ast.Package, relativePath string) *GoPackage {
 	return gpkg
 }
 
+//@TODO ParseDir only parse go files just in this dir
 func ParseProject(__dir string) (*GoProject, error) {
 	proName := path.Base(__dir)
 

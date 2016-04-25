@@ -428,9 +428,9 @@ func ConvertGoXxxIntoNeo4jNode(goxxx interface{}) Neo4jNode {
 
 func _Public(public bool) string {
 	if public {
-		return "PUBLIC"
+		return "public"
 	}
-	return "PRIVATE"
+	return "private"
 }
 
 func (this *gofile) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
@@ -443,45 +443,46 @@ func (this *gofile) CreateNode(db *neoism.Database) (node *neoism.Node, first er
 }
 
 func (this *goalias) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoAlias)(this).IsPublic())}); first != nil {
 		return
 	}
 
-	first = node.AddLabel("TYPE", "ALIAS", _Public((*golang.GoAlias)(this).IsPublic()))
+	first = node.AddLabel("ALIAS", "TYPE")
 	return
 }
 
 func (this *gointerface) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoInterface)(this).IsPublic())}); first != nil {
 		return
 	}
 
-	first = node.AddLabel("TYPE", "INTERFACE", _Public((*golang.GoInterface)(this).IsPublic()))
+	first = node.AddLabel("INTERFACE", "TYPE")
 	return
 }
 
 func (this *gostruct) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoStruct)(this).IsPublic())}); first != nil {
 		return
 	}
 
-	first = node.AddLabel("TYPE", "STRUCT", _Public((*golang.GoStruct)(this).IsPublic()))
+	first = node.AddLabel("STRUCT", "TYPE")
 	return
 }
 
 func (this *gofunc) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoFunc)(this).IsPublic())}); first != nil {
 		return
 	}
 
-	first = node.AddLabel("FUNCTION", _Public((*golang.GoFunc)(this).IsPublic()))
+	first = node.AddLabel("FUNCTION")
 	return
 }
 
 func (this *gomethod) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoMethod)(this).IsPublic())}); first != nil {
 		return
 	}
+
 
 	first = node.AddLabel("METHOD")
 	return

@@ -409,6 +409,10 @@ func CreateGoMethod(name string) *GoMethod {
 	return &GoMethod{GoFunc: *CreateGoFunc(name)}
 }
 
+func (this *GoMethod) IsPublic() bool {
+	return _IsUpper(this.Name[0])
+}
+
 func (this *GoStruct) AddMethod(method *GoMethod) {
 	this.Methods[method.Name] = method
 }
