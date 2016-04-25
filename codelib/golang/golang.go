@@ -45,11 +45,41 @@ func __GetFieldTypeName(x ast.Expr) string {
 		ret = "map[" + __GetFieldTypeName(m.Key) + "]" + __GetFieldTypeName(m.Value)
 	case *ast.ParenExpr:
 		ret = __GetFieldTypeName(x.(*ast.ParenExpr).X)
+	case *ast.InterfaceType:
+		// special case, the empty interface `interface{}`
+		__assert(x.(*ast.InterfaceType).Methods.NumFields() == 0)
+		ret = "interface{}"
+	case *ast.FuncType:
+		f := x.(*ast.FuncType)
+		ret += "func("
+		// vars
+		paramLen := len(f.Params.List)
+		retLen := len(f.Results.List)
+		for i := 0; i < paramLen; i++ {
+			ret += __GetFieldTypeName(f.Params.List[i].Type)
+			if i != paramLen-1 {
+				ret += ", "
+			}
+		}
+		ret += ")"
+		if retLen == 1 {
+			ret += " " + __GetFieldTypeName(f.Results.List[0].Type)
+		} else if retLen > 1 {
+			ret += "("
+			for i := 0; i < retLen; i++ {
+				ret += __GetFieldTypeName(f.Results.List[i].Type)
+				if i != retLen-1 {
+					ret += ", "
+				}
+			}
+			ret += ")"
+		}
 
+	case *ast.Ellipsis:
+		e := x.(*ast.Ellipsis)
+		ret += "[]" + __GetFieldTypeName(e.Elt)
 	/*
 	 *case *ast.StructType:
-	 *case *ast.InterfaceType:
-	 *case *ast.FuncType:
 	 */
 	default:
 		panic("golang/golang.go ## __GetFieldTypeName: should not reach here")
@@ -93,8 +123,13 @@ func __ResolveInterfaceType(interfaceType *ast.InterfaceType, __interface *GoInt
 
 func __ResolveFuncType(funcType *ast.FuncType, __function *GoFunc) {
 	for _, paramField := range funcType.Params.List {
-		__assert(paramField.Names != nil)
-		arg := &GoVar{Name: paramField.Names[0].Name, Type: __GetFieldTypeName(paramField.Type)}
+		// could be nil, like `func(string)bool`
+		var arg *GoVar = nil
+		if paramField.Names != nil {
+			arg = &GoVar{Name: paramField.Names[0].Name, Type: __GetFieldTypeName(paramField.Type)}
+		} else {
+			arg = &GoVar{Name: "", Type: __GetFieldTypeName(paramField.Type)}
+		}
 		__function.Args = append(__function.Args, arg)
 	}
 
@@ -136,9 +171,9 @@ func __ResolveType(typeSpec *ast.TypeSpec, gfile *GoFile) {
 		_ = gfile.Ns.AddType(CreateGoTypeOfInterface(__interface))
 
 	case *ast.FuncType:
-		__function := CreateGoFunc(Name)
-		__ResolveFuncType(typeSpec.Type.(*ast.FuncType), __function)
-		_ = gfile.Ns.AddFunc(__function)
+		// if type == *ast.FuncType, then it must be something like `type A func(x int) bool`
+		__alias := CreateGoAlias(Name, __GetFieldTypeName(typeSpec.Type))
+		_ = gfile.Ns.AddType(CreateGoTypeOfAlias(__alias))
 
 	default:
 		__alias := CreateGoAlias(Name, __GetFieldTypeName(typeSpec.Type))
@@ -396,7 +431,7 @@ func __ResolveAllMethodsInPackage(astFile *ast.File, gpkg *GoPackage) {
 
 			__type := gpkg.GetType(recvTypeName)
 
-			__assert(__type.Kind == Stt || __type.Kind == Als)
+			__assert(__type != nil && __type.Kind == Stt || __type.Kind == Als)
 
 			if __type.Kind == Stt { // struct
 				__StructType := __type.Type.(*GoStruct)
@@ -499,6 +534,7 @@ func __ParsePackage(pkg *ast.Package, relativePath string) *GoPackage {
 	gpkg := CreateGoPackage(pkg.Name, relativePath)
 
 	for fileName, file := range pkg.Files {
+		fmt.Fprintf(os.Stdout, "Processing %s\n", fileName)
 		gpkg.Files[fileName] = __GenerateGoFileFromAstFile(file, fileName)
 	}
 

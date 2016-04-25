@@ -2,25 +2,27 @@
 package codelib
 
 import (
-	"testing"
 	"codelib/golang"
 	"os"
+	"testing"
 )
 
 const (
 	username = "neo4j"
 	password = "dsj1994"
-	url = "localhost:7474/db/data"
+	url      = "localhost:7474/db/data"
 )
 
 const (
 	testdir = "golang/testcases"
 
-	__case_1 = "types.go"
-	__case_2 = "ast.go"
+	filecase_1 = "types.go"
+	filecase_2 = "ast.go"
+	pkgcase_1  = "pkgtest"
+	pkgcase_2 = "ast"
 )
 
-func __TestParseFile(t *testing.T, file string) *golang.GoFile{
+func __TestParseFile(t *testing.T, file string) *golang.GoFile {
 	if file, err := os.Open(testdir + "/" + file); err != nil {
 		t.Fatal(err)
 	} else {
@@ -35,26 +37,60 @@ func __TestParseFile(t *testing.T, file string) *golang.GoFile{
 	return nil
 }
 
-func TestExportGoPackageToNeo4j(t *testing.T) {
+/*
+ *func TestExportGoFileToNeo4j(t *testing.T) {
+ *    if db, err := __Connect(username, password, url); err != nil {
+ *        t.Fatal(err)
+ *    } else {
+ *        _gfile := __TestParseFile(t, filecase_1)
+ *        gfile := gofile(*_gfile)
+ *        if _, err := gfile.Write(db); err != nil {
+ *            t.Fatal(err)
+ *        }
+ *    }
+ *}
+ *
+ *func TestExportGoFileToNeo4j2(t *testing.T) {
+ *    if db, err := __Connect(username, password, url); err != nil {
+ *        t.Fatal(err)
+ *    } else {
+ *        _gfile := __TestParseFile(t, filecase_2)
+ *        gfile := gofile(*_gfile)
+ *        if _, err := gfile.Write(db); err != nil {
+ *            t.Fatal(err)
+ *        }
+ *    }
+ *}
+ */
+
+func TestExportGoPackageToNeo4j1(t *testing.T) {
 	if db, err := __Connect(username, password, url); err != nil {
 		t.Fatal(err)
 	} else {
-		_gfile := __TestParseFile(t, __case_1)
-		gfile := gofile(*_gfile)
-		if _, err := gfile.Write(db); err != nil {
+		if _gpro, err := golang.ParseProject(testdir + "/" + pkgcase_1); err != nil {
 			t.Fatal(err)
+		} else {
+			gpro := gopro(*_gpro)
+			if _, err := gpro.Write(db); err != nil {
+				t.Fatal(err)
+			}
 		}
 	}
 }
 
-func TestExportGoPackageToNeo4j2(t *testing.T) {
-	if db, err := __Connect(username, password, url); err != nil {
-		t.Fatal(err)
-	} else {
-		_gfile := __TestParseFile(t, __case_2)
-		gfile := gofile(*_gfile)
-		if _, err := gfile.Write(db); err != nil {
-			t.Fatal(err)
-		}
-	}
-}
+/*
+ *func TestExportGoPackageToNeo4j2(t *testing.T) {
+ *    if db, err := __Connect(username, password, url); err != nil {
+ *        t.Fatal(err)
+ *    } else {
+ *        if _gpro, err := golang.ParseProject(testdir + "/" + pkgcase_2); err != nil {
+ *            t.Fatal(err)
+ *        } else {
+ *            gpro := gopro(*_gpro)
+ *            if _, err := gpro.Write(db); err != nil {
+ *                t.Fatal(err)
+ *            }
+ *        }
+ *    }
+ *}
+ */

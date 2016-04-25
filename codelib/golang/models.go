@@ -90,6 +90,18 @@ func (this *goNamespace) GetInterfaces() []*GoInterface {
 	return interfaces
 }
 
+func (this *goNamespace) GetAliases() []*GoAlias {
+	var aliases []*GoAlias = make([]*GoAlias, 0, 16)
+
+	for _, v := range this.Types {
+		if v.Kind == Als {
+			aliases = append(aliases, v.Type.(*GoAlias))
+		}
+	}
+
+	return aliases
+}
+
 func (this *goNamespace) GetFuncs() []*GoFunc {
 	var funcs []*GoFunc = make([]*GoFunc, 0, len(this.Funcs))
 

@@ -4,7 +4,6 @@ package codelib
 
 import (
 	"codelib/golang"
-	"fmt"
 
 	"github.com/jmcvetta/neoism"
 )
@@ -87,10 +86,12 @@ func (this *gopkg) Write(db *neoism.Database) (root *neoism.Node, first error) {
 
 	__assert(root != nil, "codelib/neo4j.go ## gopkg.Write: root should not be nil, something wrong with creation")
 
+	var NODES map[interface{}]*neoism.Node = make(map[interface{}]*neoism.Node)
+
 	// process files one by one
 	for _, _file := range this.Files {
 		file := gofile(*_file)
-		if fileNode, err := file.Write(db); err != nil {
+		if fileNode, err := file.WriteWithoutRelations(db, NODES); err != nil {
 			return root, err
 		} else {
 			if _, err := root.Relate("HAS", fileNode.Id(), neoism.Props{}); err != nil {
@@ -102,43 +103,50 @@ func (this *gopkg) Write(db *neoism.Database) (root *neoism.Node, first error) {
 		}
 	}
 
+	// process relations
+	for _, _file := range this.Files {
+		file := gofile(*_file)
+		if err := file.WriteRelations(db, NODES); err != nil {
+			return root, err
+		}
+	}
+
 	return root, nil
 }
 
-func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) {
-	if root, first = this.CreateNode(db); first != nil {
-		return nil, first
-	}
-
-	__assert(root != nil, "codelib/neo4j.go ## gofile.Write: root should not be nil, something wrong with creation")
-
-	// store types (structs) and interfaces
-	var NODES map[interface{}]*neoism.Node = make(map[interface{}]*neoism.Node)
-
+func (this *gofile) WriteImports(db *neoism.Database, root *neoism.Node) (first error) {
 	// imports
 	for _, __import := range this.Imports {
 		_import := goimport(__import)
 		if importNode, err := _import.CreateNode(db); err != nil {
-			return root, err
+			return err
 		} else {
 			if _, err := root.Relate("IMPORT", importNode.Id(), neoism.Props{}); err != nil {
-				return root, err
+				return err
 			}
 		}
 	}
 
+	return nil
+}
+
+func (this *gofile) WriteFunctions(db *neoism.Database, root *neoism.Node) (first error) {
 	// functions
 	for _, _function := range this.Ns.GetFuncs() {
 		function := gofunc(*_function)
 		if funcNode, err := function.CreateNode(db); err != nil {
-			return root, err
+			return err
 		} else {
 			if _, err := root.Relate("DEFINE", funcNode.Id(), neoism.Props{}); err != nil {
-				return root, err
+				return err
 			}
 		}
 	}
 
+	return nil
+}
+
+func (this *gofile) WriteTypes(db *neoism.Database, root *neoism.Node, NODES map[interface{}]*neoism.Node) (first error) {
 	__ProcessMethods := func(methods map[string]*golang.GoMethod, node *neoism.Node) error {
 		for _, _method := range methods {
 			method := gomethod(*_method)
@@ -165,7 +173,7 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 
 		if interfaceNode, ok = NODES[__interface]; !ok {
 			if interfaceNode, err = _interface.CreateNode(db); err != nil {
-				return root, err
+				return err
 			} else {
 				// store interfaces of this package
 				NODES[__interface] = interfaceNode
@@ -173,15 +181,87 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 		}
 
 		if _, err := root.Relate("DEFINE", interfaceNode.Id(), neoism.Props{}); err != nil {
-			return root, err
+			return err
 		}
 
 		// methods
 		if err := __ProcessMethods(_interface.Methods, interfaceNode); err != nil {
-			return root, err
+			return err
 		}
 	}
 
+	// types
+	for _, _type := range this.Ns.GetTypes() {
+		if _, ok := NODES[_type.Type]; ok { // this type is already created
+			continue
+		}
+		switch _type.Kind {
+		case golang.Stt:
+			__struct := _type.Type.(*golang.GoStruct)
+			_struct := gostruct(*__struct)
+			if structNode, err := _struct.CreateNode(db); err != nil {
+				return err
+			} else {
+				NODES[_type.Type] = structNode
+				if _, err := root.Relate("DEFINE", structNode.Id(), neoism.Props{}); err != nil {
+					return err
+				}
+				// then methods
+				if err := __ProcessMethods(_struct.Methods, structNode); err != nil {
+					return err
+				}
+			}
+
+		case golang.Als:
+			__alias := _type.Type.(*golang.GoAlias)
+			_alias := goalias(*__alias)
+			if aliasNode, err := _alias.CreateNode(db); err != nil {
+				return err
+			} else {
+				NODES[_type.Type] = aliasNode
+				if _, err := root.Relate("DEFINE", aliasNode.Id(), neoism.Props{}); err != nil {
+					return err
+				}
+				// methods
+				if err := __ProcessMethods(_alias.Methods, aliasNode); err != nil {
+					return err
+				}
+			}
+
+		//case golang.Itf:
+		//case golang.Bti:
+		default:
+			__assert(true, "")
+		}
+	}
+
+	return nil
+}
+
+// NODES stores all types (structs | alias | interface) corresponding nodes in neo4j
+func (this *gofile) WriteWithoutRelations(db *neoism.Database, NODES map[interface{}]*neoism.Node) (root *neoism.Node, first error) {
+	if root, first = this.CreateNode(db); first != nil {
+		return nil, first
+	}
+
+	__assert(root != nil, "codelib/neo4j.go ## gofile.WriteWithoutRelations: root should not be nil, something wrong with creation")
+
+	if err := this.WriteImports(db, root); err != nil {
+		return root, err
+	}
+
+	if err := this.WriteFunctions(db, root); err != nil {
+		return root, err
+	}
+
+	if err := this.WriteTypes(db, root, NODES); err != nil {
+		return root, err
+	}
+
+	return root, nil
+}
+
+func (this *gofile) WriteRelations(db *neoism.Database, NODES map[interface{}]*neoism.Node) (first error) {
 	// processing interface extends
 	for _, __interface := range this.Ns.GetInterfaces() {
 
@@ -200,7 +280,7 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 					panic("codelib/neo4j.go ## gfile.Write: should not reach here")
 				} else {
 					if _, err := interfaceNode.Relate(RELATIONSHIP, extendNode.Id(), neoism.Props{}); err != nil {
-						return root, err
+						return err
 					}
 				}
 			}
@@ -229,72 +309,50 @@ func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) 
 		return nil
 	}
 
-	// types
-	for _, _type := range this.Ns.GetTypes() {
-		if _, ok := NODES[_type.Type]; ok { // this type is already created
-			continue
-		}
-		switch _type.Kind {
-		case golang.Stt:
-			__struct := _type.Type.(*golang.GoStruct)
-			_struct := gostruct(*__struct)
-			if structNode, err := _struct.CreateNode(db); err != nil {
-				return root, err
-			} else {
-				if _, err := root.Relate("DEFINE", structNode.Id(), neoism.Props{}); err != nil {
-					return root, err
-				}
-				// then methods
-				if err := __ProcessMethods(_struct.Methods, structNode); err != nil {
-					return root, err
-				}
-				// then implements
-				if err := __ProcessImplements(_struct.Interfaces, structNode); err != nil {
-					return root, err
-				}
-			}
-
-		case golang.Als:
-			__alias := _type.Type.(*golang.GoAlias)
-			_alias := goalias(*__alias)
-			if aliasNode, err := _alias.CreateNode(db); err != nil {
-				return root, err
-			} else {
-				if _, err := root.Relate("DEFINE", aliasNode.Id(), neoism.Props{}); err != nil {
-					return root, err
-				}
-				// methods
-				if err := __ProcessMethods(_alias.Methods, aliasNode); err != nil {
-					return root, err
-				}
-				// implements
-				if err := __ProcessImplements(_alias.Interfaces, aliasNode); err != nil {
-					return root, err
-				}
-			}
-
-		//case golang.Itf:
-		//case golang.Bti:
-		default:
-			__assert(true, "")
-		}
-	}
-
-	// processing struct's extends
+	// processing struct's extends & implements
 	for _, __struct := range this.Ns.GetStructs() {
-		for _, _extend := range __struct.Extends {
-			if structNode, ok := NODES[__struct]; !ok {
-				panic("codelib/neo4j.go ## gfile.Write: should not reach here")
-			} else {
+		if structNode, ok := NODES[__struct]; !ok {
+			panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+		} else {
+			for _, _extend := range __struct.Extends {
 				if extendNode, ok := NODES[_extend]; !ok {
 					panic("codelib/neo4j.go ## gfile.Write: should not reach here")
 				} else {
 					if _, err := structNode.Relate("EXTEND", extendNode.Id(), neoism.Props{}); err != nil {
-						return root, err
+						return err
 					}
 				}
 			}
+			if err := __ProcessImplements(__struct.Interfaces, structNode); err != nil {
+				return err
+			}
 		}
+	}
+
+	// processing alias' implements
+	for _, __alias := range this.Ns.GetAliases() {
+		if aliasNode, ok := NODES[__alias]; !ok {
+			panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+		} else {
+			if err := __ProcessImplements(__alias.Interfaces, aliasNode); err != nil {
+				return err
+			}
+		}
+	}
+
+	return nil
+}
+
+func (this *gofile) Write(db *neoism.Database) (root *neoism.Node, first error) {
+	// store types (structs) and interfaces
+	var NODES map[interface{}]*neoism.Node = make(map[interface{}]*neoism.Node)
+
+	if root, first = this.WriteWithoutRelations(db, NODES); first != nil {
+		return
+	}
+
+	if first = this.WriteRelations(db, NODES); first != nil {
+		return
 	}
 
 	return root, nil
