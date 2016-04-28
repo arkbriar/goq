@@ -58,3 +58,13 @@ func TestParsePackage2(t *testing.T) {
 		}
 	}
 }
+
+func TestSelfParse(t *testing.T) {
+	if gpro, err := ParseProject("."); err != nil {
+		t.Fatal(err)
+	} else {
+		for _, pkg := range gpro.Packages {
+			t.Log(pkg)
+		}
+	}
+}

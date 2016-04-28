@@ -47,6 +47,7 @@ func (this *gopro) Write(db *neoism.Database) (root *neoism.Node, first error) {
 
 	__assert(root != nil, "codelib/neo4j.go ## gopro.Write: root should not be nil, something wrong with creation")
 
+	// writing this project
 	for _, _pkg := range this.Packages {
 		pkg := gopkg(*_pkg)
 		if pkgNode, err := pkg.Write(db); err != nil {
@@ -63,6 +64,19 @@ func (this *gopro) Write(db *neoism.Database) (root *neoism.Node, first error) {
 					return nil, _err
 				}
 				return nil, err
+			}
+		}
+	}
+
+	// writing sub projects of this
+	for _, _subpro := range this.SubPros {
+		subpro := ConvertGoXxxIntoNeo4jMap(_subpro)
+		if subproNode, err := subpro.Write(db); err != nil {
+			return root, err
+		} else {
+			// Porject -HAS-> Project
+			if _, err := root.Relate("HAS", subproNode.Id(), neoism.Props{}); err != nil {
+				return root, err
 			}
 		}
 	}
@@ -443,7 +457,11 @@ func (this *gofile) CreateNode(db *neoism.Database) (node *neoism.Node, first er
 }
 
 func (this *goalias) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoAlias)(this).IsPublic())}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{
+		"name":          this.Name,
+		"encapsulation": _Public((*golang.GoAlias)(this).IsPublic()),
+		"alias_of":      this.Type,
+	}); first != nil {
 		return
 	}
 
@@ -452,7 +470,10 @@ func (this *goalias) CreateNode(db *neoism.Database) (node *neoism.Node, first e
 }
 
 func (this *gointerface) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoInterface)(this).IsPublic())}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{
+		"name":          this.Name,
+		"encapsulation": _Public((*golang.GoInterface)(this).IsPublic()),
+	}); first != nil {
 		return
 	}
 
@@ -461,7 +482,10 @@ func (this *gointerface) CreateNode(db *neoism.Database) (node *neoism.Node, fir
 }
 
 func (this *gostruct) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoStruct)(this).IsPublic())}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{
+		"name":          this.Name,
+		"encapsulation": _Public((*golang.GoStruct)(this).IsPublic()),
+	}); first != nil {
 		return
 	}
 
@@ -470,7 +494,10 @@ func (this *gostruct) CreateNode(db *neoism.Database) (node *neoism.Node, first 
 }
 
 func (this *gofunc) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoFunc)(this).IsPublic())}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{
+		"name":          this.Name,
+		"encapsulation": _Public((*golang.GoFunc)(this).IsPublic()),
+	}); first != nil {
 		return
 	}
 
@@ -479,10 +506,12 @@ func (this *gofunc) CreateNode(db *neoism.Database) (node *neoism.Node, first er
 }
 
 func (this *gomethod) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
-	if node, first = db.CreateNode(neoism.Props{"name": this.Name, "encapsulation": _Public((*golang.GoMethod)(this).IsPublic())}); first != nil {
+	if node, first = db.CreateNode(neoism.Props{
+		"name":          this.Name,
+		"encapsulation": _Public((*golang.GoMethod)(this).IsPublic()),
+	}); first != nil {
 		return
 	}
-
 
 	first = node.AddLabel("METHOD")
 	return

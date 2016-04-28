@@ -2,8 +2,10 @@ package main
 
 import (
 	"fmt"
-	"codelib"
-	"os"
+	/*
+	 *"codelib"
+	 *"os"
+	 */
 )
 
 const (
@@ -13,5 +15,5 @@ const (
 )
 
 func main() {
-	fmt.Println("Here is Code Library.")
+	fmt.Println("Here is GoQuery.")
 }

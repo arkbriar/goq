@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"errors"
 )
 
 func __assert(condition bool) {
@@ -20,10 +21,11 @@ func __assert(condition bool) {
 type GoProject struct {
 	Name     string
 	Packages map[string]*GoPackage
+	SubPros  map[string]*GoProject
 }
 
 func CreateGoProject(name string) *GoProject {
-	return &GoProject{Name: name, Packages: make(map[string]*GoPackage)}
+	return &GoProject{Name: name, Packages: make(map[string]*GoPackage), SubPros: make(map[string]*GoProject)}
 }
 
 func __GetFieldTypeName(x ast.Expr) string {
@@ -476,6 +478,7 @@ func __ResolveAllRelationsInPackage(gfile *GoFile, gpkg *GoPackage) {
 				panic("golang/golang.go ## __ResolveAllRelations: should not reach here")
 			}
 
+		}
 	}
 
 	// find out interfaces implemented by type
@@ -543,10 +546,8 @@ func __ParsePackage(pkg *ast.Package, relativePath string) *GoPackage {
 	return gpkg
 }
 
-//@TODO ParseDir only parse go files just in this dir
-func ParseProject(__dir string) (*GoProject, error) {
+func __ParseDir(__dir string, __relative_path string) (*GoProject, error) {
 	proName := path.Base(__dir)
-
 	fset := token.NewFileSet()
 
 	var err error = nil
@@ -561,11 +562,45 @@ func ParseProject(__dir string) (*GoProject, error) {
 	gpkgs := gpro.Packages
 
 	for packageName, pkg := range pkgs {
-		// @TODO relative path is not considered
-		gpkgs[packageName] = __ParsePackage(pkg, "")
+		gpkgs[packageName] = __ParsePackage(pkg, __relative_path)
 	}
 
-	return gpro, nil
+	// parse the subdirs recursively
+	const all = -1
+
+	if df, err := os.Open(__dir); err != nil {
+		return nil, err
+	} else {
+		if fi, err := df.Readdir(all); err == nil {
+			for _, can_dir := range fi {
+				if can_dir.IsDir() {
+					// parse this dir
+					sub_dir := __dir + "/" + can_dir.Name()
+					//@TODO
+					if can_dir.Name() == "testcases" {
+						continue
+					}
+					if _gpro, err := __ParseDir(sub_dir, sub_dir); err != nil {
+						return gpro, err
+					} else if _gpro != nil {
+						gpro.SubPros[_gpro.Name] = _gpro
+					}
+				}
+			}
+		}
+	}
+
+	// empty dir (there're no go src files in this dir)
+	if len(gpro.Packages) == 0 && len(gpro.SubPros) == 0 {
+		return nil, errors.New("Empty dir without any go src files or dirs: " + __dir)
+	} else {
+		return gpro, nil
+	}
+}
+
+func ParseProject(__dir string) (*GoProject, error) {
+	pro, err := __ParseDir(__dir, "")
+	return pro, err
 }
 
 // this function is only for test
