@@ -222,9 +222,9 @@ type (
 		Name         string             // package name
 		RelativePath string             // relative path in this project
 		Files        map[string]*GoFile // source files in this package
-		GlobalNs     *goNamespace       // global namespace (all types & functions in this package)
+		//GlobalNs     *goNamespace       // global namespace (all types & functions in this package)
 
-		upper *GoPackage // upper package
+		//upper *GoPackage // upper package
 	}
 
 	GoFile struct {
@@ -303,8 +303,8 @@ func CreateGoPackage(name string, relativePath string) *GoPackage {
 		Name:         name,
 		RelativePath: relativePath,
 		Files:        make(map[string]*GoFile),
-		GlobalNs:     __CreateGoNameSpace(),
-		upper:        nil,
+		//GlobalNs:     __CreateGoNameSpace(),
+		//upper:        nil,
 	}
 
 	return gp

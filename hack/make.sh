@@ -3,7 +3,7 @@
 function Build() {
     echo "Building ..."
     go install codelib
-    go build -o GoQuery main.go
+    go build -o GoQuery .
 }
 
 if [ $# == 0 ]; then

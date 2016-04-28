@@ -6,10 +6,10 @@ import (
 	"go/parser"
 	"go/token"
 
+	"errors"
 	"fmt"
 	"os"
 	"path"
-	"errors"
 )
 
 func __assert(condition bool) {
@@ -22,10 +22,16 @@ type GoProject struct {
 	Name     string
 	Packages map[string]*GoPackage
 	SubPros  map[string]*GoProject
+	Upper    *GoProject
 }
 
 func CreateGoProject(name string) *GoProject {
-	return &GoProject{Name: name, Packages: make(map[string]*GoPackage), SubPros: make(map[string]*GoProject)}
+	return &GoProject{
+		Name:     name,
+		Packages: make(map[string]*GoPackage),
+		SubPros:  make(map[string]*GoProject),
+		Upper:    nil,
+	}
 }
 
 func __GetFieldTypeName(x ast.Expr) string {
@@ -584,6 +590,7 @@ func __ParseDir(__dir string, __relative_path string) (*GoProject, error) {
 						return gpro, err
 					} else if _gpro != nil {
 						gpro.SubPros[_gpro.Name] = _gpro
+						_gpro.Upper = gpro
 					}
 				}
 			}

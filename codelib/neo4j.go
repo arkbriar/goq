@@ -8,6 +8,10 @@ import (
 	"github.com/jmcvetta/neoism"
 )
 
+func ConnectNeo4j(username, password, url string) (db *neoism.Database, err error) {
+	return neoism.Connect("http://" + username + ":" + password + "@" + url)
+}
+
 func __Connect(username, password, url string) (db *neoism.Database, err error) {
 	return neoism.Connect("http://" + username + ":" + password + "@" + url)
 }
