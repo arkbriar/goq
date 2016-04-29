@@ -7,6 +7,6 @@ import (
 )
 
 var (
-	GOPATH = strings.Split(os.Getenv("GOPATH"), ":")
-	GOROOT = strings.Split(os.Getenv("GOROOT"), ":")
+	GOPATH = strings.Split(os.Getenv("GOPATH"), ":")[0]
+	GOROOT = strings.Split(os.Getenv("GOROOT"), ":")[0]
 )

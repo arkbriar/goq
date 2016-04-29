@@ -12,50 +12,50 @@ const (
 	RETURN x.name
 	`
 	__QUERY_SUBPROJECTS string = `
-	MATCH (p:PROJECT)-[:HAS]-[x:PROJECT]
+	MATCH (p:PROJECT)-[:HAS]->(x:PROJECT)
 	WHERE p.name = {name}
 	RETURN x.name
 	`
 
 	__QUERY_PACKAGES_OF_PROJECT string = `
-	MATCH (x:PACKAGE)<-[:HAS]-[p:PROJECT]
+	MATCH (x:PACKAGE)<-[:HAS]-(p:PROJECT)
 	WHERE p.name = {name}
 	RETURN x.name
 	`
 
 	__QUERY_STRUCTS_OF_PACKAGE string = `
-	MATCH (x:STRUCT)<-[:DEFINE]-[p:PACKAGE]
+	MATCH (x:STRUCT)<-[:DEFINE]-(p:PACKAGE)
 	WHERE p.name = {name}
 	RETURN x.name
 	`
 
 	__QUERY_INTERFACES_OF_PACKAGE string = `
-	MATCH (x:INTERFACE)<-[:DEFINE]-[p:PACKAGE]
+	MATCH (x:INTERFACE)<-[:DEFINE]-(p:PACKAGE)
 	WHERE p.name = {name}
 	RETURN x.name
 	`
 	// `struct` can be struct or alias
 	// properties are in something like `{name}`
 	__QUERY_INTERFACES_OF_STRUCT string = `
-	MATCH (s:TYPE)-[:IMPLEMENT]-(x:INTERFACE)-[:DEFINE]-(f:FILE)
+	MATCH (s:TYPE)-[:IMPLEMENT]-(x:INTERFACE)-[:DEFINE]-(y:FILE)
 	WHERE s.name = {name}
 	RETURN x.name, y.name
 
 	`
 	__QUERY_STRUCTS_OF_INTERFACE string = `
-	MATCH (f:FILE)-[:DEFINE]-(x:TYPE)-[:IMPLEMENT]-(i:INTERFACE)
+	MATCH (y:FILE)-[:DEFINE]-(x:TYPE)-[:IMPLEMENT]-(i:INTERFACE)
 	WHERE i.name = {name}
 	RETURN x.name, y.name
 	`
 
 	__QUERY_INHERITORS_OF_STRUCT string = `
-	MATCH (f:FILE)-[:DEFINE]-(x:TYPE)-[:EXTEND]-(t:TYPE)
+	MATCH (y:FILE)-[:DEFINE]-(x:TYPE)-[:EXTEND]-(t:TYPE)
 	WHERE t.name = {name}
 	RETURN x.name, y.name
 	`
 
 	__QUERY_STRUCTS_INHERITED_BY string = `
-	MATCH (s:TYPE)-[:EXTEND]-(x:TYPE)-[:DEFINE]-(f:FILE)
+	MATCH (s:TYPE)-[:EXTEND]-(x:TYPE)-[:DEFINE]-(y:FILE)
 	WHERE s.name = {name}
 	RETURN x.name, y.name
 	`
@@ -77,18 +77,18 @@ func query(db *neoism.Database, cq *neoism.CypherQuery, res interface{}) error {
 }
 
 type Oresult struct {
-	first string `json:"x.name"`
+	First string `json:"x.name"`
 }
 
 type Tresult struct {
-	first  string `json:"x.name"`
-	second string `json:"y.name"`
+	First  string `json:"x.name"`
+	Second string `json:"y.name"`
 }
 
 type Thresult struct {
-	first  string `json:"x.name"`
-	second string `json:"y.name"`
-	third  string `json:"z.name"`
+	First  string `json:"x.name"`
+	Second string `json:"y.name"`
+	Third  string `json:"z.name"`
 }
 
 func CreateCypherQuery(stmt string, params map[string]interface{}, res interface{}) *neoism.CypherQuery {
@@ -132,6 +132,12 @@ func QueryProjects(db *neoism.Database) ([]Oresult, error) {
 		return res, nil
 	}
 }
+
+type (
+	QueryFuncOne func(db *neoism.Database, name string) ([]Oresult, error)
+	QueryFuncTwo func(db *neoism.Database, name string) ([]Tresult, error)
+	QueryFuncThree func(db *neoism.Database, name string) ([]Thresult, error)
+)
 
 func QuerySubProjects(db *neoism.Database, name string) ([]Oresult, error) {
 	return internalImplementationOfSimpleQuery1(db, __QUERY_SUBPROJECTS, name)
@@ -185,7 +191,7 @@ func QueryStructsInheritedBy(db *neoism.Database, name string) ([]Tresult, error
 // delete
 const (
 	__DELETE_PROJECT string = `
-	MATCH (p:PROJECT)-[*1..5]->(n)
+	MATCH (p:PROJECT)-[*1..9]->(n)
 	WHERE p.name = {name}
 	DETACH DELETE p, n
 	`
