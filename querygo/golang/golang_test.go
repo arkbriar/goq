@@ -12,7 +12,7 @@ const (
 	filecase_1 = "types.go"
 	filecase_2 = "ast.go"
 	pkgcase_1  = "pkgtest"
-	pkgcase_2 = "ast"
+	pkgcase_2  = "ast"
 )
 
 func __TestParseFile(t *testing.T, file string) *GoFile {
@@ -33,13 +33,11 @@ func __TestParseFile(t *testing.T, file string) *GoFile {
 func TestParseFile(t *testing.T) {
 	gfile := __TestParseFile(t, "types.go")
 	__PrintNamespace(gfile.Ns)
-}
 
-func TestParseFile2(t *testing.T) {
 	__TestParseFile(t, "ast.go")
 }
 
-func TestParsePackage1(t *testing.T) {
+func TestParsePackage(t *testing.T) {
 	if gpro, err := ParseProject(testdir + "/" + pkgcase_1); err != nil {
 		t.Fatal(err)
 	} else {
@@ -47,9 +45,7 @@ func TestParsePackage1(t *testing.T) {
 			t.Log(pkg)
 		}
 	}
-}
 
-func TestParsePackage2(t *testing.T) {
 	if gpro, err := ParseProject(testdir + "/" + pkgcase_2); err != nil {
 		t.Fatal(err)
 	} else {

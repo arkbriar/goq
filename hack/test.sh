@@ -1,11 +1,10 @@
 #!/bin/bash
 
 function Test() {
-    echo "Running all tests of" $(pwd) "..."
-    go test -v .
+    go test -cover -v .
 }
 
-pushd codelib
+pushd querygo
 
 # test package codelib/golang
 pushd golang
