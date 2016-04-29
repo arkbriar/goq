@@ -59,7 +59,9 @@ func main() {
 		log.Println(err)
 	}
 
-	querygo.Init()
+	if !DryRun {
+		querygo.Init()
+	}
 
 	if DoList {
 		o, err := querygo.QueryPackagesOfProject(querygo.DB, "golang")

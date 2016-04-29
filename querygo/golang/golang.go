@@ -34,6 +34,13 @@ func CreateGoProject(name string) *GoProject {
 	}
 }
 
+func __RemoveFirstStar(x string) string {
+	if x[0] == '*' {
+		return x[1:]
+	}
+	return x
+}
+
 func __GetFieldTypeName(x ast.Expr) string {
 	var ret string
 	switch x.(type) {
@@ -91,9 +98,19 @@ func __GetFieldTypeName(x ast.Expr) string {
 	case *ast.Ellipsis:
 		e := x.(*ast.Ellipsis)
 		ret += "[]" + __GetFieldTypeName(e.Elt)
-	/*
-	 *case *ast.StructType:
-	 */
+
+	case *ast.StructType:
+		s := x.(*ast.StructType)
+		ret += "struct {\n"
+		if s.Fields != nil {
+			for _, field := range s.Fields.List {
+				if field.Names != nil {
+					ret += field.Names[0].Name + " "
+				}
+				ret += __GetFieldTypeName(field.Type) + "\n"
+			}
+		}
+		ret += "}"
 	default:
 		panic("golang/golang.go ## __GetFieldTypeName: should not reach here")
 	}
@@ -444,7 +461,12 @@ func __ResolveAllMethodsInPackage(astFile *ast.File, gpkg *GoPackage) {
 
 			__type := gpkg.GetType(recvTypeName)
 
-			__assert(__type != nil && __type.Kind == Stt || __type.Kind == Als)
+			if __type == nil {
+				//@TODO
+				continue
+			}
+
+			__assert(__type != nil && (__type.Kind == Stt || __type.Kind == Als))
 
 			if __type.Kind == Stt { // struct
 				__StructType := __type.Type.(*GoStruct)
@@ -463,6 +485,10 @@ func __ResolveAllRelationsInPackage(gfile *GoFile, gpkg *GoPackage) {
 	for _, __interface := range gfile.Ns.GetInterfaces() {
 		for _, anonymous := range __interface.__Anonymous {
 			__a_type := gpkg.GetType(anonymous)
+			if __a_type == nil {
+				//@TODO
+				continue
+			}
 			// must be interface in interface, otherwise the compiler will give an error
 			__assert(__a_type.Kind == Itf)
 			__a_itf := __a_type.Type.(*GoInterface)
@@ -474,6 +500,10 @@ func __ResolveAllRelationsInPackage(gfile *GoFile, gpkg *GoPackage) {
 	for _, __struct := range gfile.Ns.GetStructs() {
 		for _, anonymous := range __struct.__Anonymous {
 			__a_type := gpkg.GetType(anonymous)
+			if __a_type == nil {
+				//@TODO this is a type defined in another package
+				continue
+			}
 			switch __a_type.Kind {
 			case Stt:
 				__struct.Extends[anonymous] = __a_type.Type.(*GoStruct)
