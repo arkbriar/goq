@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path"
+	"path/filepath"
 )
 
 func __assert(condition bool) {
@@ -61,8 +62,13 @@ func __GetFieldTypeName(x ast.Expr) string {
 		f := x.(*ast.FuncType)
 		ret += "func("
 		// vars
-		paramLen := len(f.Params.List)
-		retLen := len(f.Results.List)
+		var paramLen, retLen int = 0, 0
+		if f.Params != nil && f.Params.List != nil {
+			paramLen = len(f.Params.List)
+		}
+		if f.Results != nil && f.Results.List != nil {
+			retLen = len(f.Results.List)
+		}
 		for i := 0; i < paramLen; i++ {
 			ret += __GetFieldTypeName(f.Params.List[i].Type)
 			if i != paramLen-1 {
@@ -543,7 +549,10 @@ func __ParsePackage(pkg *ast.Package, relativePath string) *GoPackage {
 	gpkg := CreateGoPackage(pkg.Name, relativePath)
 
 	for fileName, file := range pkg.Files {
-		fmt.Fprintf(os.Stdout, "Processing %s\n", fileName)
+		fileName = filepath.Join(relativePath, filepath.Base(fileName))
+		/*
+		 *fmt.Fprintf(os.Stdout, "Processing %s\n", fileName)
+		 */
 		gpkg.Files[fileName] = __GenerateGoFileFromAstFile(file, fileName)
 	}
 
@@ -586,7 +595,7 @@ func __ParseDir(__dir string, __relative_path string) (*GoProject, error) {
 					if can_dir.Name() == "testcases" {
 						continue
 					}
-					if _gpro, err := __ParseDir(sub_dir, sub_dir); err != nil {
+					if _gpro, err := __ParseDir(sub_dir, filepath.Join(__relative_path, can_dir.Name())); err != nil {
 						return gpro, err
 					} else if _gpro != nil {
 						gpro.SubPros[_gpro.Name] = _gpro
@@ -606,7 +615,11 @@ func __ParseDir(__dir string, __relative_path string) (*GoProject, error) {
 }
 
 func ParseProject(__dir string) (*GoProject, error) {
-	pro, err := __ParseDir(__dir, "")
+	absolute_path, err := filepath.Abs(__dir)
+	if err != nil {
+		return nil, err
+	}
+	pro, err := __ParseDir(absolute_path, "")
 	return pro, err
 }
 

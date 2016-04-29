@@ -2,14 +2,8 @@
 
 function Build() {
     echo "Building ..."
-    go install codelib
-    go build -o GoQuery .
+    go install querygo
+    go build -o $1 .
 }
 
-if [ $# == 0 ]; then
-    exit -1
-fi
-
-if [ $1 = "BINARY" ]; then
-    Build;
-fi
+Build $1;

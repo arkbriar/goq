@@ -1,4 +1,4 @@
-CodeLib: the library of codes
+QueryGo: Query Everything Of Go Projects
 =================
 
 Getting started

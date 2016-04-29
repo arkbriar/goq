@@ -15,5 +15,5 @@ const (
 )
 
 func main() {
-	fmt.Println("Here is GoQuery.")
+	fmt.Println("Here is QueryGo.")
 }

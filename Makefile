@@ -2,13 +2,15 @@
 
 BASH=bash
 
+BINARY=goq
+
 default: binary
 
 binary:
-	@ $(BASH) hack/make.sh BINARY
+	@ $(BASH) hack/make.sh $(BINARY)
 
 test:
 	@ $(BASH) hack/test.sh
 
 clean:
-	- rm main
+	- rm $(BINARY)

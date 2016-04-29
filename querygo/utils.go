@@ -1,4 +1,4 @@
-package codelib
+package querygo
 
 func __assert(condition bool, msg string) {
 	if !condition {

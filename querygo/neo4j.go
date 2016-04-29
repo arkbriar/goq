@@ -1,9 +1,9 @@
 // Copyright 2016 ArkBriar. All rights reserved.
 // Copyright 2016 ArkBriar. All rights reserved.
-package codelib
+package querygo
 
 import (
-	"codelib/golang"
+	"querygo/golang"
 
 	"github.com/jmcvetta/neoism"
 )
@@ -49,7 +49,7 @@ func (this *gopro) Write(db *neoism.Database) (root *neoism.Node, first error) {
 		return nil, first
 	}
 
-	__assert(root != nil, "codelib/neo4j.go ## gopro.Write: root should not be nil, something wrong with creation")
+	__assert(root != nil, "querygo/neo4j.go ## gopro.Write: root should not be nil, something wrong with creation")
 
 	// writing this project
 	for _, _pkg := range this.Packages {
@@ -102,7 +102,7 @@ func (this *gopkg) Write(db *neoism.Database) (root *neoism.Node, first error) {
 		return nil, first
 	}
 
-	__assert(root != nil, "codelib/neo4j.go ## gopkg.Write: root should not be nil, something wrong with creation")
+	__assert(root != nil, "querygo/neo4j.go ## gopkg.Write: root should not be nil, something wrong with creation")
 
 	var NODES map[interface{}]*neoism.Node = make(map[interface{}]*neoism.Node)
 
@@ -262,7 +262,7 @@ func (this *gofile) WriteWithoutRelations(db *neoism.Database, NODES map[interfa
 		return nil, first
 	}
 
-	__assert(root != nil, "codelib/neo4j.go ## gofile.WriteWithoutRelations: root should not be nil, something wrong with creation")
+	__assert(root != nil, "querygo/neo4j.go ## gofile.WriteWithoutRelations: root should not be nil, something wrong with creation")
 
 	if err := this.WriteImports(db, root); err != nil {
 		return root, err
@@ -292,10 +292,10 @@ func (this *gofile) WriteRelations(db *neoism.Database, NODES map[interface{}]*n
 		}
 		for _, _extend := range __interface.Extends {
 			if interfaceNode, ok := NODES[__interface]; !ok {
-				panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+				panic("querygo/neo4j.go ## gfile.Write: should not reach here")
 			} else {
 				if extendNode, ok := NODES[_extend]; !ok {
-					panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+					panic("querygo/neo4j.go ## gfile.Write: should not reach here")
 				} else {
 					if _, err := interfaceNode.Relate(RELATIONSHIP, extendNode.Id(), neoism.Props{}); err != nil {
 						return err
@@ -330,11 +330,11 @@ func (this *gofile) WriteRelations(db *neoism.Database, NODES map[interface{}]*n
 	// processing struct's extends & implements
 	for _, __struct := range this.Ns.GetStructs() {
 		if structNode, ok := NODES[__struct]; !ok {
-			panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+			panic("querygo/neo4j.go ## gfile.Write: should not reach here")
 		} else {
 			for _, _extend := range __struct.Extends {
 				if extendNode, ok := NODES[_extend]; !ok {
-					panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+					panic("querygo/neo4j.go ## gfile.Write: should not reach here")
 				} else {
 					if _, err := structNode.Relate("EXTEND", extendNode.Id(), neoism.Props{}); err != nil {
 						return err
@@ -350,7 +350,7 @@ func (this *gofile) WriteRelations(db *neoism.Database, NODES map[interface{}]*n
 	// processing alias' implements
 	for _, __alias := range this.Ns.GetAliases() {
 		if aliasNode, ok := NODES[__alias]; !ok {
-			panic("codelib/neo4j.go ## gfile.Write: should not reach here")
+			panic("querygo/neo4j.go ## gfile.Write: should not reach here")
 		} else {
 			if err := __ProcessImplements(__alias.Interfaces, aliasNode); err != nil {
 				return err
@@ -400,7 +400,7 @@ func ConvertGoXxxIntoNeo4jMap(goxxx interface{}) Neo4jMap {
 		tmp := gopro(*goxxx.(*golang.GoProject))
 		ret = &tmp
 	default:
-		__assert(false, "codelib/neo4j.go ## ConvertGoXxxIntoNeo4jMap: should not reach here, check your code.")
+		__assert(false, "querygo/neo4j.go ## ConvertGoXxxIntoNeo4jMap: should not reach here, check your code.")
 	}
 
 	return ret
@@ -438,7 +438,7 @@ func ConvertGoXxxIntoNeo4jNode(goxxx interface{}) Neo4jNode {
 		tmp := gomethod(*goxxx.(*golang.GoMethod))
 		ret = &tmp
 	default:
-		__assert(false, "codelib/neo4j.go ## ConvertGoXxxIntoNeo4jNode: should not reach here, check your code.")
+		__assert(false, "querygo/neo4j.go ## ConvertGoXxxIntoNeo4jNode: should not reach here, check your code.")
 	}
 
 	return ret

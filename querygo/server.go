@@ -1,5 +1,5 @@
 // Copyright 2016 ArkBriar. All rights reserved.
-package codelib
+package querygo
 
 import (
 	"bytes"

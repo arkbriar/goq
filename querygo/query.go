@@ -1,5 +1,5 @@
 // Copyright 2016 ArkBriar. All rights reserved.
-package codelib
+package querygo
 
 import (
 	"github.com/jmcvetta/neoism"
@@ -180,4 +180,61 @@ func QueryInheritorsOfStruct(db *neoism.Database, name string) ([]Tresult, error
 
 func QueryStructsInheritedBy(db *neoism.Database, name string) ([]Tresult, error) {
 	return internalImplementationOfSimpleQuery2(db, __QUERY_STRUCTS_INHERITED_BY, name)
+}
+
+// delete
+const (
+	__DELETE_PROJECT string = `
+	MATCH (p:PROJECT)-[*1..5]->(n)
+	WHERE p.name = {name}
+	DETACH DELETE p, n
+	`
+
+	__DELETE_PACKAGE string = `
+	MATCH (p:PACKAGE)-[*1..3]->(n)
+	WHERE p.name = {name}
+	DETACH DELETE p, n
+	`
+
+	__DELETE_FILE string = `
+	MATCH (f:FILE)-[*1..2]->(n)
+	WHERE f.name = {name}
+	DETACH DELETE f, n
+	`
+)
+
+func DeleteProject(db *neoism.Database, name string) error {
+	return query(
+		db,
+		CreateCypherQuery(
+			__DELETE_PROJECT,
+			neoism.Props{"name": name},
+			nil,
+		),
+		nil,
+	)
+}
+
+func DeletePackage(db *neoism.Database, name string) error {
+	return query(
+		db,
+		CreateCypherQuery(
+			__DELETE_PACKAGE,
+			neoism.Props{"name": name},
+			nil,
+		),
+		nil,
+	)
+}
+
+func DeleteFile(db *neoism.Database, name string) error {
+	return query(
+		db,
+		CreateCypherQuery(
+			__DELETE_FILE,
+			neoism.Props{"name": name},
+			nil,
+		),
+		nil,
+	)
 }
