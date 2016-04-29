@@ -2,7 +2,6 @@
 
 function Build() {
     echo "Building ..."
-    go install querygo
     go build -o $1 .
 }
 

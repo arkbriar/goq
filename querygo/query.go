@@ -18,19 +18,19 @@ const (
 	`
 
 	__QUERY_PACKAGES_OF_PROJECT string = `
-	MATCH (x:PACKAGE)<-[:HAS]-(p:PROJECT)
+	MATCH (x:PACKAGE)<-[:CONTAIN]-(p:PROJECT)
 	WHERE p.name = {name}
 	RETURN x.name
 	`
 
 	__QUERY_STRUCTS_OF_PACKAGE string = `
-	MATCH (x:STRUCT)<-[:DEFINE]-(p:PACKAGE)
+	MATCH (x:STRUCT)<-[:DEFINE]-(:FILE)-[:HAS]-(p:PACKAGE)
 	WHERE p.name = {name}
 	RETURN x.name
 	`
 
 	__QUERY_INTERFACES_OF_PACKAGE string = `
-	MATCH (x:INTERFACE)<-[:DEFINE]-(p:PACKAGE)
+	MATCH (x:INTERFACE)<-[:DEFINE]-(:FILE)-[:HAS]-(p:PACKAGE)
 	WHERE p.name = {name}
 	RETURN x.name
 	`
@@ -106,7 +106,7 @@ func internalImplementationOfSimpleQuery1(db *neoism.Database, QUERY string, nam
 		CreateCypherQuery(
 			QUERY,
 			neoism.Props{"name": name},
-			res,
+			&res,
 		),
 		nil,
 	); err != nil {
@@ -123,7 +123,7 @@ func QueryProjects(db *neoism.Database) ([]Oresult, error) {
 		CreateCypherQuery(
 			__QUERY_PROJECTS,
 			nil,
-			res,
+			&res,
 		),
 		nil,
 	); err != nil {
@@ -162,7 +162,7 @@ func internalImplementationOfSimpleQuery2(db *neoism.Database, QUERY string, nam
 		CreateCypherQuery(
 			QUERY,
 			neoism.Props{"name": name},
-			res,
+			&res,
 		),
 		nil,
 	); err != nil {

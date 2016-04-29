@@ -6,7 +6,6 @@ import (
 	"go/parser"
 	"go/token"
 
-	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -608,7 +607,8 @@ func __ParseDir(__dir string, __relative_path string) (*GoProject, error) {
 
 	// empty dir (there're no go src files in this dir)
 	if len(gpro.Packages) == 0 && len(gpro.SubPros) == 0 {
-		return nil, errors.New("Empty dir without any go src files or dirs: " + __dir)
+		return nil, nil
+		//return nil, errors.New("Empty dir without any go src files or dirs: " + __dir)
 	} else {
 		return gpro, nil
 	}

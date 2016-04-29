@@ -45,18 +45,27 @@ func __Query(t *testing.T, db *neoism.Database, query interface{}, name string) 
 		if r, err := (query.(func(*neoism.Database, string)([]Oresult, error)))(db, name); err != nil {
 			t.Fatal(err)
 		} else {
+			if len(r) == 0 {
+				t.Fatal("Result should not be empty.")
+			}
 			t.Log(r)
 		}
 	case func(*neoism.Database, string)([]Tresult, error):
 		if r, err := (query.(func(*neoism.Database, string)([]Tresult, error)))(db, name); err != nil {
 			t.Fatal(err)
 		} else {
+			if len(r) == 0 {
+				t.Fatal("Result should not be empty.")
+			}
 			t.Log(r)
 		}
 	case func(*neoism.Database, string)([]Thresult, error):
 		if r, err := (query.(func(*neoism.Database, string)([]Thresult, error)))(db, name); err != nil {
 			t.Fatal(err)
 		} else {
+			if len(r) == 0 {
+				t.Fatal("Result should not be empty.")
+			}
 			t.Log(r)
 		}
 	default:
