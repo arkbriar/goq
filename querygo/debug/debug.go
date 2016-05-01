@@ -1,5 +1,5 @@
 // Copyright 2016 ArkBriar. All rights reserved.
-package querygo
+package debug
 
 import (
 	"log"
@@ -7,8 +7,6 @@ import (
 )
 
 type DebugLog bool
-
-var debug DebugLog
 
 var dbgLog = log.New(os.Stdout, "[DEBUG] ", log.Ltime)
 
@@ -22,8 +20,4 @@ func (d DebugLog) Println(args ...interface{}) {
 	if d {
 		dbgLog.Println(args...)
 	}
-}
-
-func SetDebug(Debug DebugLog) {
-	debug = Debug
 }

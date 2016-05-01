@@ -4,9 +4,17 @@ package querygo
 import (
 	"fmt"
 	"os"
+	"querygo/debug"
 	"querygo/golang"
 	"strconv"
 )
+
+var dbg debug.DebugLog
+
+func SetDebug(D debug.DebugLog) {
+	dbg = D
+	golang.SetDebug(D)
+}
 
 func Init() {
 	var err error

@@ -5,12 +5,19 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"querygo/debug"
 
 	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 )
+
+var dbg debug.DebugLog
+
+func SetDebug(D debug.DebugLog) {
+	dbg = D
+}
 
 func __assert(condition bool) {
 	if !condition {

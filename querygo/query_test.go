@@ -41,8 +41,8 @@ func __Delete(t *testing.T, db *neoism.Database, name string) {
 
 func __Query(t *testing.T, db *neoism.Database, query interface{}, name string) {
 	switch query.(type) {
-	case func(*neoism.Database, string)([]Oresult, error):
-		if r, err := (query.(func(*neoism.Database, string)([]Oresult, error)))(db, name); err != nil {
+	case func(*neoism.Database, string) ([]Oresult, error):
+		if r, err := (query.(func(*neoism.Database, string) ([]Oresult, error)))(db, name); err != nil {
 			t.Fatal(err)
 		} else {
 			if len(r) == 0 {
@@ -50,8 +50,8 @@ func __Query(t *testing.T, db *neoism.Database, query interface{}, name string) 
 			}
 			t.Log(r)
 		}
-	case func(*neoism.Database, string)([]Tresult, error):
-		if r, err := (query.(func(*neoism.Database, string)([]Tresult, error)))(db, name); err != nil {
+	case func(*neoism.Database, string) ([]Tresult, error):
+		if r, err := (query.(func(*neoism.Database, string) ([]Tresult, error)))(db, name); err != nil {
 			t.Fatal(err)
 		} else {
 			if len(r) == 0 {
@@ -59,8 +59,8 @@ func __Query(t *testing.T, db *neoism.Database, query interface{}, name string) 
 			}
 			t.Log(r)
 		}
-	case func(*neoism.Database, string)([]Thresult, error):
-		if r, err := (query.(func(*neoism.Database, string)([]Thresult, error)))(db, name); err != nil {
+	case func(*neoism.Database, string) ([]Thresult, error):
+		if r, err := (query.(func(*neoism.Database, string) ([]Thresult, error)))(db, name); err != nil {
 			t.Fatal(err)
 		} else {
 			if len(r) == 0 {

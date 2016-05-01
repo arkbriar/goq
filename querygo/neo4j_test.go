@@ -2,8 +2,8 @@
 package querygo
 
 import (
-	"querygo/golang"
 	"os"
+	"querygo/golang"
 	"testing"
 )
 
@@ -19,7 +19,7 @@ const (
 	filecase_1 = "types.go"
 	filecase_2 = "ast.go"
 	pkgcase_1  = "pkgtest"
-	pkgcase_2 = "ast"
+	pkgcase_2  = "ast"
 )
 
 func __TestParseFile(t *testing.T, file string) *golang.GoFile {
@@ -51,7 +51,7 @@ func __Parse_Export_Then_Delete_File(t *testing.T, file string) {
 
 		// then delete
 		t.Log("Deleting...")
-		if err := DeleteFile(db,gfile.Name); err != nil {
+		if err := DeleteFile(db, gfile.Name); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -73,22 +73,21 @@ func __Parse_Export_Then_Delete_Project(t *testing.T, dir string) {
 
 			// then delete
 			t.Log("Deleting...")
-			if err := DeleteProject(db,gpro.Name); err != nil {
+			if err := DeleteProject(db, gpro.Name); err != nil {
 				t.Fatal(err)
 			}
 		}
 	}
 }
 
-
 func TestFileParseAndExport(t *testing.T) {
-	__Parse_Export_Then_Delete_File(t, testdir + "/" + filecase_1)
-	__Parse_Export_Then_Delete_File(t, testdir + "/" + filecase_2)
+	__Parse_Export_Then_Delete_File(t, testdir+"/"+filecase_1)
+	__Parse_Export_Then_Delete_File(t, testdir+"/"+filecase_2)
 }
 
 func TestProjectParseAndExport(t *testing.T) {
-	__Parse_Export_Then_Delete_Project(t, testdir + "/" + pkgcase_1)
-	__Parse_Export_Then_Delete_Project(t, testdir + "/" + pkgcase_2)
+	__Parse_Export_Then_Delete_Project(t, testdir+"/"+pkgcase_1)
+	__Parse_Export_Then_Delete_Project(t, testdir+"/"+pkgcase_2)
 }
 
 func TestSelfParseAndExport(t *testing.T) {

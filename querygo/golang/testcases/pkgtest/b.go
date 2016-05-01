@@ -7,7 +7,7 @@ type LinkNode struct {
 }
 
 func CreateLinkNode(d int) *LinkNode {
-	return &LinkNode{FileAStruct:&FileAStruct{data: d}, prev: nil, next: nil}
+	return &LinkNode{FileAStruct: &FileAStruct{data: d}, prev: nil, next: nil}
 }
 
 func (this *LinkNode) FuncA() {

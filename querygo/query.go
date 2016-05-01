@@ -91,6 +91,18 @@ type Thresult struct {
 	Third  string `json:"z.name"`
 }
 
+func (this Oresult) String() string {
+	return this.First
+}
+
+func (this Tresult) String() string {
+	return this.First + ", " + this.Second
+}
+
+func (this Thresult) String() string {
+	return this.First + ", " + this.Second + ", " + this.Third
+}
+
 func CreateCypherQuery(stmt string, params map[string]interface{}, res interface{}) *neoism.CypherQuery {
 	return &neoism.CypherQuery{
 		Statement:  stmt,
@@ -134,8 +146,8 @@ func QueryProjects(db *neoism.Database) ([]Oresult, error) {
 }
 
 type (
-	QueryFuncOne func(db *neoism.Database, name string) ([]Oresult, error)
-	QueryFuncTwo func(db *neoism.Database, name string) ([]Tresult, error)
+	QueryFuncOne   func(db *neoism.Database, name string) ([]Oresult, error)
+	QueryFuncTwo   func(db *neoism.Database, name string) ([]Tresult, error)
 	QueryFuncThree func(db *neoism.Database, name string) ([]Thresult, error)
 )
 
