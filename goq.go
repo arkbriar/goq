@@ -8,6 +8,9 @@ import (
 	"querygo"
 	"querygo/debug"
 	"strings"
+
+	"time"
+	"runtime"
 )
 
 const (
@@ -15,6 +18,12 @@ const (
 	password = "dsj1994"
 	url      = "localhost:7474/db/data"
 )
+
+func ReadMemStats() uint64 {
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	return m.TotalAlloc / 1024
+}
 
 func main() {
 	log.SetOutput(os.Stdout)
@@ -83,9 +92,14 @@ func main() {
 	}
 
 	if SrcFile != "" {
+		startUnixTime := time.Now().UnixNano()
+		fmt.Printf("Memory allocated before parsing is %d Kb\n", ReadMemStats())
 		if err := querygo.Export(SrcFile, DryRun, Simple); err != nil {
 			log.Fatalln(err)
 		}
+		fmt.Printf("Memory allocated after parsing is %d Kb\n", ReadMemStats())
+		stopUnixTime := time.Now().UnixNano()
+		fmt.Printf("Time cost on parsing and exporting is %dms\n", (stopUnixTime - startUnixTime) / 1e6)
 		os.Exit(0)
 	}
 

@@ -131,8 +131,10 @@ func __ResolveStructType(structType *ast.StructType, __struct *GoStruct) {
 			// anonymous
 			__struct.__Anonymous = append(__struct.__Anonymous, typeName)
 		} else {
-			varName := field.Names[0].Name
-			__struct.Vars[varName] = &GoVar{Name: varName, Type: typeName}
+			for _, _var := range field.Names {
+				varName := _var.Name
+				__struct.Vars[varName] = &GoVar{Name: varName, Type: typeName}
+			}
 		}
 	}
 }
@@ -380,6 +382,9 @@ func __GenerateGoFileFromAstFile(astFile *ast.File, name string) *GoFile {
 		if obj.Kind == ast.Typ {
 			if typeSpec, ok := obj.Decl.(*ast.TypeSpec); ok {
 				__ResolveType(typeSpec, gfile)
+				if (obj.Data != nil) {
+					fmt.Println("data isn't nil, the type is " + obj.Name)
+				}
 			} else {
 				panic("golang/golang.go ## __GenerateGoFileFromAstFile: should not reach here")
 			}
