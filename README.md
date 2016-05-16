@@ -1,4 +1,4 @@
-Query on Go: Query Everything Of Go Projects
+GoQuery: Query Of Go Projects
 =================
 
 Getting started

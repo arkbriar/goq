@@ -465,7 +465,7 @@ func (this *gofile) CreateNode(db *neoism.Database) (node *neoism.Node, first er
 func (this *goalias) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
 	if node, first = db.CreateNode(neoism.Props{
 		"name":          this.Name,
-		"encapsulation": _Public((*golang.GoAlias)(this).IsPublic()),
+		"visibility": _Public((*golang.GoAlias)(this).IsPublic()),
 		"alias_of":      this.Type,
 	}); first != nil {
 		return
@@ -478,7 +478,7 @@ func (this *goalias) CreateNode(db *neoism.Database) (node *neoism.Node, first e
 func (this *gointerface) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
 	if node, first = db.CreateNode(neoism.Props{
 		"name":          this.Name,
-		"encapsulation": _Public((*golang.GoInterface)(this).IsPublic()),
+		"visibility": _Public((*golang.GoInterface)(this).IsPublic()),
 	}); first != nil {
 		return
 	}
@@ -490,7 +490,7 @@ func (this *gointerface) CreateNode(db *neoism.Database) (node *neoism.Node, fir
 func (this *gostruct) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
 	if node, first = db.CreateNode(neoism.Props{
 		"name":          this.Name,
-		"encapsulation": _Public((*golang.GoStruct)(this).IsPublic()),
+		"visibility": _Public((*golang.GoStruct)(this).IsPublic()),
 	}); first != nil {
 		return
 	}
@@ -502,7 +502,7 @@ func (this *gostruct) CreateNode(db *neoism.Database) (node *neoism.Node, first 
 func (this *gofunc) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
 	if node, first = db.CreateNode(neoism.Props{
 		"name":          this.Name,
-		"encapsulation": _Public((*golang.GoFunc)(this).IsPublic()),
+		"visibility": _Public((*golang.GoFunc)(this).IsPublic()),
 	}); first != nil {
 		return
 	}
@@ -514,7 +514,7 @@ func (this *gofunc) CreateNode(db *neoism.Database) (node *neoism.Node, first er
 func (this *gomethod) CreateNode(db *neoism.Database) (node *neoism.Node, first error) {
 	if node, first = db.CreateNode(neoism.Props{
 		"name":          this.Name,
-		"encapsulation": _Public((*golang.GoMethod)(this).IsPublic()),
+		"visibility": _Public((*golang.GoMethod)(this).IsPublic()),
 	}); first != nil {
 		return
 	}
